@@ -1,0 +1,24 @@
+node_modules
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+.git
+.gitignore
+
+.env
+.env.*
+
+.DS_Store
+Thumbs.db
+
+README.md
+
+*.log
+
+# OS / editor junk
+.vscode
+.idea
+
+# Optional: if you ever add local data
+data/
