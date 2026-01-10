@@ -54,9 +54,9 @@ function serveAppIndex(appName) {
 }
 
 app.get("/", serveAppIndex("storefront"));
-app.get(["/apps/storefront", "/apps/storefront/"], serveAppIndex("storefront"));
-app.get(["/apps/dealer", "/apps/dealer/"], serveAppIndex("dealer"));
-app.get(["/apps/admin", "/apps/admin/"], serveAppIndex("admin"));
+app.get(["/storefront", "/storefront/"], serveAppIndex("storefront"));
+app.get(["/dealer", "/dealer/"], serveAppIndex("dealer"));
+app.get(["/admin", "/admin/"], serveAppIndex("admin"));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
