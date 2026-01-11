@@ -3,353 +3,310 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Carsales SaaS – Dealer Portal</title>
-
+  <title>Carsales – Dealer</title>
   <style>
     :root{
-      --bg:#fff7f7;
-      --card:#ffffff;
-      --ink:#0f172a;
-      --muted:#64748b;
-
-      --accent:#ef4444;
-      --accent2:#fb7185;
-      --accentSoft: rgba(239,68,68,0.10);
-
-      --border: rgba(15,23,42,0.10);
-      --border2: rgba(239,68,68,0.25);
-
-      --shadow: 0 18px 50px rgba(15,23,42,0.10);
-      --shadow2: 0 10px 24px rgba(15,23,42,0.08);
-
-      --good:#16a34a;
-      --warn:#f59e0b;
-      --bad:#ef4444;
-
+      --bg:#0b1020;
+      --card:#0f1630;
+      --card2:#121b3a;
+      --ink:#eef2ff;
+      --muted:#aab3d6;
+      --muted2:#7f88ad;
+      --border:rgba(255,255,255,.10);
+      --shadow:0 18px 50px rgba(0,0,0,.45);
+      --brand:#ff3b3b;
+      --brand2:#ff6b6b;
+      --good:#22c55e;
+      --warn:#fbbf24;
+      --bad:#fb7185;
       --radius:18px;
-      --radius2:24px;
-
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
-
     *{box-sizing:border-box}
-    html,body{height:100%}
     body{
-      margin:0; font-family:var(--sans); color:var(--ink);
+      margin:0;
+      font-family:var(--sans);
+      color:var(--ink);
       background:
-        radial-gradient(circle at 10% 0%, rgba(239,68,68,0.10), transparent 45%),
-        radial-gradient(circle at 90% 20%, rgba(251,113,133,0.10), transparent 45%),
-        radial-gradient(circle at 50% 100%, rgba(239,68,68,0.06), transparent 55%),
-        var(--bg);
+        radial-gradient(1200px 800px at 15% 0%, rgba(255,59,59,.22), transparent 55%),
+        radial-gradient(900px 650px at 85% 20%, rgba(80,120,255,.18), transparent 50%),
+        linear-gradient(180deg, #060914, #070a18 30%, #050615);
       -webkit-font-smoothing:antialiased;
     }
-    a{color:inherit; text-decoration:none}
+    a{color:inherit;text-decoration:none}
     .hidden{display:none!important}
 
-    .wrap{min-height:100%; display:flex; align-items:center; justify-content:center; padding:18px}
-    .card{
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
+    .shell{
       width:100%;
-      max-width:1160px;
-      background: var(--card);
-      border-radius: var(--radius2);
-      border:1px solid var(--border);
+      max-width:1180px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:28px;
       box-shadow: var(--shadow);
-      padding:18px;
+      overflow:hidden;
+      backdrop-filter: blur(14px);
     }
 
     .top{
-      display:flex; flex-wrap:wrap; gap:12px;
-      justify-content:space-between; align-items:flex-start;
-      margin-bottom:14px;
+      display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+      padding:16px 18px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
     }
-    .brand{display:flex; align-items:center; gap:12px}
-    .badge{
-      width:44px;height:44px;border-radius:16px;
-      background: radial-gradient(circle at 30% 0, #fecaca, #ef4444 55%, #7f1d1d 100%);
-      display:flex;align-items:center;justify-content:center;
-      font-weight:900;font-size:18px;color:#fff;
-      box-shadow: 0 12px 26px rgba(239,68,68,0.20);
-    }
-    .title{font-size:18px;font-weight:850; letter-spacing:0.01em}
-    .sub{font-size:12px;color:var(--muted); margin-top:3px}
-
-    .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center}
-
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:7px 10px; border-radius:999px;
-      background: rgba(15,23,42,0.03);
-      border:1px solid var(--border);
-      color: var(--muted); font-size:12px;
-    }
-    .dot{width:9px;height:9px;border-radius:999px;background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,0.18)}
-    .dot.on{background:var(--good); box-shadow:0 0 0 3px rgba(22,163,74,0.18)}
-    .dot.err{background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,0.18)}
-
-    .btn{
-      border-radius:999px; border:1px solid transparent;
-      padding:9px 14px; font-size:12px; font-weight:750;
-      display:inline-flex; align-items:center; gap:8px;
-      cursor:pointer; background:transparent; color:var(--ink);
-      transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
-      user-select:none;
-    }
-    .btn:disabled{opacity:.6; cursor:not-allowed}
-    .btn-ghost{
-      border-color: var(--border);
-      background: rgba(15,23,42,0.02);
-      color: var(--ink);
-    }
-    .btn-ghost:hover{border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.06); transform: translateY(-1px)}
-    .btn-primary{
-      background: linear-gradient(135deg, #ef4444, #fb7185);
-      border-color: rgba(15,23,42,0.15);
-      color:#fff;
-      box-shadow: 0 14px 28px rgba(239,68,68,0.22);
-    }
-    .btn-primary:hover{transform:translateY(-1px); box-shadow: 0 18px 40px rgba(239,68,68,0.28)}
-    .btn-primary:active{transform:translateY(0); filter:brightness(0.98)}
-
-    .grid{
-      display:grid; grid-template-columns: 1fr; gap:14px;
-    }
-    @media(min-width:980px){
-      .grid{grid-template-columns: 0.38fr 0.62fr}
-    }
-
-    .panel{
-      background: rgba(15,23,42,0.02);
-      border:1px solid var(--border);
-      border-radius: 18px;
-      padding:12px;
-      box-shadow: var(--shadow2);
-    }
-    .panel h3{margin:0 0 6px; font-size:13px; font-weight:900; letter-spacing:.02em}
-    .hint{font-size:12px;color:var(--muted); line-height:1.35}
-
-    .field{margin-top:10px}
-    .label{display:flex; justify-content:space-between; gap:10px; font-size:11px; color:var(--muted); margin-bottom:6px}
-    .input,.select,.textarea{
-      width:100%;
-      border-radius: 14px;
-      border:1px solid var(--border);
-      background: #fff;
-      padding:10px 12px;
-      font-size:13px;
-      color:var(--ink);
-      outline:none;
-      transition:border-color .15s ease, box-shadow .15s ease, transform .05s ease, background .15s ease;
-    }
-    .input:focus,.select:focus,.textarea:focus{
-      border-color: rgba(239,68,68,0.45);
-      box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
-      transform: translateY(-1px);
-    }
-    .textarea{min-height:96px; resize:vertical}
-
-    .row{display:grid; grid-template-columns: 1fr; gap:10px}
-    @media(min-width:560px){ .row.two{grid-template-columns: 1fr 1fr} }
-    @media(min-width:560px){ .row.three{grid-template-columns: 1fr 1fr 1fr} }
-
-    /* Table */
-    .table-shell{overflow:hidden; border-radius:18px; border:1px solid var(--border); background:#fff; box-shadow: var(--shadow2)}
-    .table-head{
-      display:flex; justify-content:space-between; align-items:center; gap:10px;
-      padding:10px 12px; border-bottom:1px solid var(--border);
-      background: linear-gradient(to right, rgba(239,68,68,0.06), rgba(15,23,42,0.02));
-    }
-    .table-title{font-size:13px; font-weight:900}
-    .table-meta{font-size:11px; color:var(--muted)}
-    .scroll{max-height:560px; overflow:auto}
-    table{width:100%; border-collapse:collapse; font-size:12px}
-    thead{position:sticky; top:0; background: #fff; z-index:1}
-    th,td{padding:10px 10px; text-align:left; border-bottom:1px solid rgba(15,23,42,0.06)}
-    th{font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted)}
-    tbody tr{transition: background .12s ease}
-    tbody tr:hover{background: rgba(239,68,68,0.04)}
-    .mono{font-family:var(--mono); font-size:11px}
-
-    .status{
-      display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px;
-      font-size:10px; letter-spacing:.08em; text-transform:uppercase; border:1px solid transparent;
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      display:grid;place-items:center;
+      background: radial-gradient(circle at 30% 20%, #ffd6d6, var(--brand) 45%, #7f1d1d 100%);
+      box-shadow:0 18px 30px rgba(255,59,59,.25);
       font-weight:900;
     }
-    .available{background: rgba(22,163,74,0.12); color:#14532d; border-color: rgba(22,163,74,0.25)}
-    .pending{background: rgba(245,158,11,0.12); color:#7c2d12; border-color: rgba(245,158,11,0.25)}
-    .sold{background: rgba(239,68,68,0.10); color:#7f1d1d; border-color: rgba(239,68,68,0.22)}
-    .draft{background: rgba(100,116,139,0.12); color:#0f172a; border-color: rgba(100,116,139,0.25)}
+    .title{font-weight:850;letter-spacing:.02em}
+    .sub{font-size:12px;color:var(--muted);margin-top:2px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:7px 10px;border-radius:999px;
+      background: rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.10);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .dot{width:9px;height:9px;border-radius:99px;background:var(--warn);box-shadow:0 0 0 4px rgba(251,191,36,.20)}
+    .dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(34,197,94,.22)}
+    .dot.err{background:var(--bad);box-shadow:0 0 0 4px rgba(251,113,133,.20)}
+
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color:var(--ink);
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:750;
+      font-size:12px;
+      cursor:pointer;
+      display:inline-flex;align-items:center;gap:8px;
+      transition:transform .10s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.18)}
+    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+    .btn-primary{
+      border-color:rgba(0,0,0,.35);
+      background: radial-gradient(circle at 20% 0%, var(--brand2), var(--brand) 55%, #b91c1c 100%);
+      box-shadow:0 18px 36px rgba(255,59,59,.22);
+    }
+
+    .content{padding:18px}
+    .grid{display:grid;grid-template-columns: 1fr;gap:14px}
+    @media(min-width:980px){.grid{grid-template-columns: .42fr .58fr}}
+
+    .card{
+      background: rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:22px;
+      padding:14px;
+      box-shadow: 0 14px 28px rgba(0,0,0,.25);
+    }
+    .card h3{margin:0 0 6px;font-size:13px;font-weight:900;letter-spacing:.03em}
+    .hint{color:var(--muted);font-size:12px;line-height:1.35}
+    .statusline{min-height:18px;margin-top:8px;color:var(--muted);font-size:12px}
+    .statusline.error{color:var(--bad)}
+    .mono{font-family:var(--mono)}
+
+    .field{margin-top:10px}
+    .label{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px;margin-bottom:6px}
+    .input,.select,.textarea{
+      width:100%;
+      background: rgba(15,22,48,.62);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:11px 12px;
+      color:var(--ink);
+      outline:none;
+      font-size:13px;
+      transition:border-color .15s ease, transform .08s ease, background .15s ease;
+    }
+    .input:focus,.select:focus,.textarea:focus{
+      border-color: rgba(255,59,59,.55);
+      background: rgba(15,22,48,.85);
+      transform: translateY(-1px);
+    }
+    .textarea{min-height:96px;resize:vertical}
+
+    .row{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:560px){.row.two{grid-template-columns:1fr 1fr}}
+    @media(min-width:820px){.row.three{grid-template-columns:1fr 1fr 1fr}}
+
+    .table{
+      overflow:hidden;border-radius:22px;border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+    }
+    .thead{
+      display:flex;justify-content:space-between;gap:10px;align-items:center;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    }
+    .thead .t{font-weight:900;font-size:13px}
+    .thead .m{color:var(--muted);font-size:12px}
+    .scroll{max-height:560px;overflow:auto}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
+    th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    tbody tr{cursor:pointer}
+    tbody tr:hover{background:rgba(255,255,255,.04)}
+    .tag{
+      display:inline-flex;align-items:center;
+      padding:4px 10px;border-radius:999px;
+      font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+    }
+    .tag.available{border-color:rgba(34,197,94,.45);color:#bbf7d0;background:rgba(34,197,94,.12)}
+    .tag.pending{border-color:rgba(251,191,36,.45);color:#fde68a;background:rgba(251,191,36,.12)}
+    .tag.sold{border-color:rgba(251,113,133,.45);color:#fecaca;background:rgba(251,113,133,.12)}
 
     /* Modal */
     .backdrop{
-      position:fixed; inset:0; z-index:50;
-      background: rgba(15,23,42,0.55);
+      position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+      background: rgba(0,0,0,.62);
       backdrop-filter: blur(10px);
-      display:none; align-items:center; justify-content:center;
       padding:16px;
+      z-index:60;
     }
     .backdrop.show{display:flex}
     .modal{
-      width:100%; max-width:880px;
-      background:#fff;
-      border-radius: 24px;
-      border:1px solid var(--border);
-      box-shadow: 0 30px 70px rgba(15,23,42,0.25);
+      width:100%;
+      max-width:980px;
+      border-radius:26px;
+      border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.20));
+      box-shadow: 0 28px 80px rgba(0,0,0,.55);
       overflow:hidden;
     }
     .mhead{
-      padding:14px 16px 10px;
-      display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
-      border-bottom:1px solid var(--border);
-      background: linear-gradient(to right, rgba(239,68,68,0.06), rgba(15,23,42,0.02));
+      padding:14px 16px;
+      display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      background: linear-gradient(90deg, rgba(255,59,59,.12), rgba(255,255,255,.02));
     }
-    .mhead h3{margin:0; font-size:14px; font-weight:950}
+    .mhead h3{margin:0;font-size:14px;font-weight:950}
     .xbtn{
-      border:none; background:transparent; color:var(--muted);
-      font-size:20px; cursor:pointer;
-      width:36px;height:36px; display:inline-flex; align-items:center; justify-content:center;
-      border-radius:999px;
+      width:36px;height:36px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color:var(--ink);
+      cursor:pointer;
+      font-size:18px;
     }
-    .xbtn:hover{background: rgba(239,68,68,0.08); color:#7f1d1d}
-    .mbody{padding:14px 16px 16px}
-    .statusline{min-height:18px; font-size:12px; color:var(--muted); margin-top:8px}
-    .statusline.error{color:var(--bad); font-weight:750}
-
-    .divider{height:1px; background: rgba(15,23,42,0.08); margin:12px 0}
-
-    .photoGrid{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:10px;
-      margin-top:10px;
-    }
-    @media(max-width:700px){ .photoGrid{grid-template-columns: repeat(2, 1fr);} }
-    .thumb{
-      border:1px solid rgba(15,23,42,0.10);
-      border-radius:14px;
-      overflow:hidden;
-      background: rgba(15,23,42,0.02);
-      position:relative;
-      min-height:90px;
-    }
-    .thumb img{width:100%; height:100%; object-fit:cover; display:block}
-    .thumb .rm{
-      position:absolute; top:8px; right:8px;
-      border:none; cursor:pointer;
-      background: rgba(255,255,255,0.85);
-      border:1px solid rgba(15,23,42,0.10);
-      width:28px; height:28px; border-radius:999px;
-      font-weight:900; color:#7f1d1d;
-    }
-    .thumb .rm:hover{background:#fff; border-color: rgba(239,68,68,0.25)}
+    .xbtn:hover{background:rgba(255,255,255,.10)}
+    .mbody{padding:16px}
+    .footerBtns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
 
     /* Toast */
     #toast{
-      position:fixed; bottom:16px; right:16px; z-index:60;
-      padding:10px 14px; border-radius:999px; font-size:12px;
-      display:none; align-items:center; gap:8px;
-      background: #fff;
-      border:1px solid rgba(239,68,68,0.25);
-      color: var(--muted);
-      box-shadow: 0 16px 30px rgba(15,23,42,0.14);
+      position:fixed;right:16px;bottom:16px;z-index:80;
+      display:none;align-items:center;gap:10px;
+      padding:10px 14px;border-radius:999px;
+      background: rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.14);
+      color:var(--muted);
+      box-shadow: 0 18px 40px rgba(0,0,0,.55);
     }
     #toast.show{display:flex}
-    #toast.success{border-color: rgba(22,163,74,0.30); color:#14532d}
-    #toast.error{border-color: rgba(239,68,68,0.35); color:#7f1d1d}
-    #toastDot{width:8px;height:8px;border-radius:999px;background:var(--accent)}
+    #toastDot{width:10px;height:10px;border-radius:99px;background:var(--brand)}
+    #toast.success{border-color:rgba(34,197,94,.38);color:#bbf7d0}
+    #toast.error{border-color:rgba(251,113,133,.40);color:#fecaca}
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <!-- LOGIN -->
-    <div class="card" id="loginView">
-      <div class="top">
-        <div class="brand">
-          <div class="badge">D</div>
-          <div>
-            <div class="title">Dealer Portal</div>
-            <div class="sub">Sign in to manage inventory and upload photos.</div>
-          </div>
-        </div>
+<div class="wrap">
+  <div class="shell">
 
-        <div class="actions">
-          <a class="btn btn-ghost" href="/"><span>Storefront</span><span>←</span></a>
-          <a class="btn btn-ghost" href="/admin"><span>Admin</span><span>↗</span></a>
+    <div class="top">
+      <div class="brand">
+        <div class="logo">D</div>
+        <div>
+          <div class="title" id="topTitle">Dealer Portal</div>
+          <div class="sub" id="topSub">Log in to manage inventory + photos.</div>
         </div>
       </div>
-
-      <div class="panel">
-        <h3>Sign in</h3>
-        <div class="hint">Use your <b>Dealer ID</b> and the 6-digit passcode generated in Admin.</div>
-
-        <div class="row two" style="margin-top:10px">
-          <div class="field">
-            <div class="label"><span>Dealer ID</span><span>Required</span></div>
-            <input id="dealerId" class="input" placeholder="DEALER-0001" autocomplete="username" />
-          </div>
-          <div class="field">
-            <div class="label"><span>Passcode</span><span>Required</span></div>
-            <input id="passcode" class="input" type="password" inputmode="numeric" placeholder="••••••" autocomplete="current-password" />
-          </div>
+      <div class="actions">
+        <div class="pill">
+          <span class="dot" id="apiDot"></span>
+          <span id="apiText">Offline</span>
         </div>
-
-        <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px">
-          <button class="btn btn-ghost" id="btnDemo" type="button"><span>Demo mode</span><span>★</span></button>
-          <button class="btn btn-primary" id="btnLogin" type="button"><span>Sign in</span><span>→</span></button>
-        </div>
-
-        <div class="statusline" id="loginStatus"></div>
+        <a class="btn" href="/">Storefront ↗</a>
+        <button class="btn" id="btnLogout" type="button">Logout ⎋</button>
       </div>
     </div>
 
-    <!-- DASH -->
-    <div class="card hidden" id="dashView">
-      <div class="top">
-        <div class="brand">
-          <div class="badge">D</div>
-          <div>
-            <div class="title" id="dealerTitle">Dealer</div>
-            <div class="sub" id="dealerSub">Inventory manager</div>
+    <div class="content">
+      <!-- LOGIN -->
+      <div class="grid" id="loginView">
+        <div class="card">
+          <h3>Sign in</h3>
+          <div class="hint">Use the Dealer ID + passcode created in Admin.</div>
+
+          <div class="row two" style="margin-top:10px">
+            <div class="field">
+              <div class="label"><span>Dealer ID</span><span>Required</span></div>
+              <input class="input" id="dealerId" placeholder="DEALER-0001" autocomplete="username">
+            </div>
+            <div class="field">
+              <div class="label"><span>Passcode</span><span>Required</span></div>
+              <input class="input" id="passcode" type="password" placeholder="123456" autocomplete="current-password">
+            </div>
           </div>
+
+          <div class="footerBtns">
+            <button class="btn" id="btnDemo" type="button">Demo ★</button>
+            <button class="btn btn-primary" id="btnLogin" type="button">Sign in →</button>
+          </div>
+
+          <div class="statusline" id="loginStatus"></div>
         </div>
 
-        <div class="actions">
-          <div class="pill">
-            <span class="dot" id="apiDot"></span>
-            <span id="apiStatus">Connecting…</span>
+        <div class="card">
+          <h3>Photo storage</h3>
+          <div class="hint">
+            Photos upload to <b>Cloudinary</b> using your upload preset + folder.<br>
+            Then we save the Cloudinary <span class="mono">secure_url</span> into Google Sheets for the storefront.
           </div>
-          <button class="btn btn-ghost" id="btnRefresh" type="button"><span>Refresh</span><span>⟳</span></button>
-          <button class="btn btn-primary" id="btnAdd" type="button"><span>Add vehicle</span><span>＋</span></button>
-          <a class="btn btn-ghost" href="/"><span>Storefront</span><span>↗</span></a>
-          <button class="btn btn-ghost" id="btnLogout" type="button"><span>Logout</span><span>⎋</span></button>
+          <div class="statusline" id="cfgLine"></div>
         </div>
       </div>
 
-      <div class="grid">
-        <div class="panel">
+      <!-- DASH -->
+      <div class="grid hidden" id="dashView">
+        <div class="card">
           <h3>Controls</h3>
-          <div class="hint">Search + filter your inventory. Click a row to edit.</div>
+          <div class="hint">Search / filter your inventory.</div>
 
           <div class="field">
-            <div class="label"><span>Search</span><span>Vehicle ID / Make / Model / Notes</span></div>
-            <input id="q" class="input" placeholder="Search…" />
+            <div class="label"><span>Search</span><span>Vehicle / Make / Model</span></div>
+            <input class="input" id="q" placeholder="Search…">
           </div>
 
           <div class="row two">
             <div class="field">
               <div class="label"><span>Status</span><span>Filter</span></div>
-              <select id="filterStatus" class="select">
+              <select class="select" id="filterStatus">
                 <option value="">All</option>
                 <option value="available">Available</option>
                 <option value="pending">Pending</option>
                 <option value="sold">Sold</option>
-                <option value="draft">Draft</option>
               </select>
             </div>
             <div class="field">
               <div class="label"><span>Sort</span><span>Default</span></div>
-              <select id="sort" class="select">
+              <select class="select" id="sort">
                 <option value="newest">Newest</option>
                 <option value="priceAsc">Price: Low → High</option>
                 <option value="priceDesc">Price: High → Low</option>
@@ -359,22 +316,21 @@
             </div>
           </div>
 
-          <div class="statusline" id="dashStatus"></div>
-
-          <div class="divider"></div>
-          <div class="hint">
-            Uploads use <b>signed URLs</b> (fast, reliable). Photos land in your bucket in:
-            <span class="mono">dealers/{dealerId}/vehicles/{vehicleId}/images/original/</span>
+          <div class="footerBtns">
+            <button class="btn" id="btnRefresh" type="button">Refresh ⟳</button>
+            <button class="btn btn-primary" id="btnAdd" type="button">Add vehicle ＋</button>
           </div>
+
+          <div class="statusline" id="dashStatus"></div>
         </div>
 
-        <div class="table-shell">
-          <div class="table-head">
+        <div class="table">
+          <div class="thead">
             <div>
-              <div class="table-title">Your vehicles</div>
-              <div class="table-meta">Showing <span id="count">0</span> vehicles</div>
+              <div class="t">Your vehicles</div>
+              <div class="m">Showing <span id="count">0</span> vehicles</div>
             </div>
-            <div class="table-meta" id="lastUpdated">—</div>
+            <div class="m" id="lastUpdated">—</div>
           </div>
 
           <div class="scroll">
@@ -382,10 +338,10 @@
               <thead>
                 <tr>
                   <th>Vehicle</th>
+                  <th>Specs</th>
                   <th>Status</th>
                   <th>Price</th>
                   <th>Photos</th>
-                  <th>Updated</th>
                 </tr>
               </thead>
               <tbody id="tbody"></tbody>
@@ -393,856 +349,722 @@
           </div>
         </div>
       </div>
+
     </div>
   </div>
+</div>
 
-  <!-- MODAL -->
-  <div class="backdrop" id="backdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Vehicle editor">
-      <div class="mhead">
-        <div>
-          <h3 id="mTitle">Add vehicle</h3>
-          <div class="sub" id="mSub">Save details, then upload photos.</div>
-        </div>
-        <button class="xbtn" id="mClose" type="button" aria-label="Close">×</button>
+<!-- MODAL -->
+<div class="backdrop" id="backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Vehicle editor">
+    <div class="mhead">
+      <div>
+        <h3 id="mTitle">Add vehicle</h3>
+        <div class="sub" id="mSub">Save to Sheets + upload photos to Cloudinary.</div>
       </div>
+      <button class="xbtn" id="mClose" type="button" aria-label="Close">×</button>
+    </div>
 
-      <div class="mbody">
-        <div class="row two">
-          <div class="field">
-            <div class="label"><span>Vehicle ID</span><span>Auto if empty</span></div>
-            <input id="vId" class="input" placeholder="VEH-123ABC" />
-          </div>
-          <div class="field">
-            <div class="label"><span>Status</span><span>Required</span></div>
-            <select id="vStatus" class="select">
-              <option value="available">Available</option>
-              <option value="pending">Pending</option>
-              <option value="sold">Sold</option>
-              <option value="draft">Draft</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row two">
-          <div class="field">
-            <div class="label"><span>Make</span><span>Required</span></div>
-            <input id="vMake" class="input" placeholder="Toyota" list="makes" />
-            <datalist id="makes">
-              <option>Toyota</option><option>Honda</option><option>Nissan</option><option>Mazda</option>
-              <option>Suzuki</option><option>Mitsubishi</option><option>Subaru</option><option>BMW</option>
-              <option>Mercedes-Benz</option><option>Audi</option><option>Volkswagen</option><option>Kia</option>
-              <option>Hyundai</option><option>Ford</option><option>Chevrolet</option>
-            </datalist>
-          </div>
-          <div class="field">
-            <div class="label"><span>Model</span><span>Required</span></div>
-            <input id="vModel" class="input" placeholder="Vitz" />
-          </div>
-        </div>
-
-        <div class="row three">
-          <div class="field">
-            <div class="label"><span>Year</span><span>Optional</span></div>
-            <input id="vYear" class="input" type="number" placeholder="2018" />
-          </div>
-          <div class="field">
-            <div class="label"><span>Price (JMD)</span><span>Optional</span></div>
-            <input id="vPrice" class="input" type="number" placeholder="1250000" />
-          </div>
-          <div class="field">
-            <div class="label"><span>Title</span><span>Optional</span></div>
-            <input id="vTitle" class="input" placeholder="2018 Toyota Vitz — Clean unit" />
-          </div>
-        </div>
-
-        <div class="row three">
-          <div class="field">
-            <div class="label"><span>Transmission</span><span>Optional</span></div>
-            <select id="vTrans" class="select">
-              <option value="">—</option>
-              <option>Automatic</option>
-              <option>CVT</option>
-              <option>Manual</option>
-              <option>DCT</option>
-            </select>
-          </div>
-          <div class="field">
-            <div class="label"><span>Fuel</span><span>Optional</span></div>
-            <select id="vFuel" class="select">
-              <option value="">—</option>
-              <option>Gasoline</option>
-              <option>Diesel</option>
-              <option>Hybrid</option>
-              <option>Electric</option>
-            </select>
-          </div>
-          <div class="field">
-            <div class="label"><span>Body type</span><span>Optional</span></div>
-            <select id="vBody" class="select">
-              <option value="">—</option>
-              <option>Sedan</option>
-              <option>Hatchback</option>
-              <option>SUV</option>
-              <option>Wagon</option>
-              <option>Coupe</option>
-              <option>Van</option>
-              <option>Pickup</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row two">
-          <div class="field">
-            <div class="label"><span>Color</span><span>Optional</span></div>
-            <select id="vColor" class="select">
-              <option value="">—</option>
-              <option>White</option><option>Black</option><option>Silver</option><option>Gray</option>
-              <option>Blue</option><option>Red</option><option>Green</option><option>Brown</option>
-              <option>Beige</option><option>Gold</option>
-            </select>
-          </div>
-          <div class="field">
-            <div class="label"><span>Location</span><span>Optional</span></div>
-            <select id="vLoc" class="select">
-              <option value="">—</option>
-              <option>Kingston</option><option>St. Andrew</option><option>St. Catherine</option><option>St. James</option>
-              <option>Manchester</option><option>Clarendon</option><option>Portland</option><option>St. Ann</option>
-              <option>Hanover</option><option>Westmoreland</option><option>St. Thomas</option><option>Trelawny</option>
-            </select>
-          </div>
-        </div>
-
+    <div class="mbody">
+      <div class="row two">
         <div class="field">
-          <div class="label"><span>Notes</span><span>Shown to customers</span></div>
-          <textarea id="vNotes" class="textarea" placeholder="Condition, financing, trade-ins, etc."></textarea>
+          <div class="label"><span>Vehicle ID</span><span>Auto if empty</span></div>
+          <input class="input mono" id="vId" placeholder="VEH-12345">
         </div>
-
-        <div class="panel" style="margin-top:10px">
-          <h3>Photos</h3>
-          <div class="hint">Select images — we upload using signed URLs (fast, reliable).</div>
-
-          <div class="row two" style="margin-top:10px">
-            <div class="field" style="margin-top:0">
-              <div class="label"><span>Choose files</span><span>Images</span></div>
-              <input id="files" class="input" type="file" multiple accept="image/*" />
-            </div>
-            <div class="field" style="margin-top:0">
-              <div class="label"><span>Hero photo</span><span>Optional</span></div>
-              <select id="heroPick" class="select">
-                <option value="">Auto (first photo)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="photoGrid" id="photoGrid"></div>
-          <div class="statusline" id="uploadLine"></div>
+        <div class="field">
+          <div class="label"><span>Status</span><span>Required</span></div>
+          <select class="select" id="vStatus">
+            <option value="available">Available</option>
+            <option value="pending">Pending</option>
+            <option value="sold">Sold</option>
+          </select>
         </div>
-
-        <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px">
-          <button class="btn btn-ghost" id="btnCancel" type="button"><span>Cancel</span><span>×</span></button>
-          <button class="btn btn-primary" id="btnSave" type="button"><span>Save</span><span>✔</span></button>
-        </div>
-
-        <div class="statusline" id="mStatusLine"></div>
       </div>
+
+      <div class="row two">
+        <div class="field">
+          <div class="label"><span>Make</span><span>Required</span></div>
+          <input class="input" id="vMake" placeholder="Honda">
+        </div>
+        <div class="field">
+          <div class="label"><span>Model</span><span>Required</span></div>
+          <input class="input" id="vModel" placeholder="Civic">
+        </div>
+      </div>
+
+      <div class="row three">
+        <div class="field">
+          <div class="label"><span>Year</span><span>Optional</span></div>
+          <input class="input" id="vYear" type="number" placeholder="2018">
+        </div>
+        <div class="field">
+          <div class="label"><span>Price (JMD)</span><span>Optional</span></div>
+          <input class="input" id="vPrice" type="number" placeholder="1250000">
+        </div>
+        <div class="field">
+          <div class="label"><span>Title</span><span>Optional</span></div>
+          <input class="input" id="vTitle" placeholder="2018 Honda Civic — Clean unit">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="label"><span>Notes</span><span>Shown to customers</span></div>
+        <textarea class="textarea" id="vNotes" placeholder="Financing, trade-ins, condition, etc."></textarea>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3>Photos</h3>
+        <div class="hint">Uploads go to Cloudinary and we save the returned URLs.</div>
+
+        <div class="row two">
+          <div class="field">
+            <div class="label"><span>Choose files</span><span>Images</span></div>
+            <input class="input" id="files" type="file" multiple accept="image/*">
+          </div>
+          <div class="field">
+            <div class="label"><span>Hero photo</span><span>Optional</span></div>
+            <select class="select" id="heroPick">
+              <option value="auto">Auto (first photo)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="statusline" id="uploadLine"></div>
+      </div>
+
+      <div class="footerBtns">
+        <button class="btn" id="btnCancel" type="button">Cancel ×</button>
+        <button class="btn btn-primary" id="btnSave" type="button">Save ✓</button>
+      </div>
+
+      <div class="statusline" id="mStatus"></div>
     </div>
   </div>
+</div>
 
-  <!-- Toast -->
-  <div id="toast">
-    <div id="toastDot"></div>
-    <div id="toastMsg"></div>
-  </div>
+<div id="toast"><div id="toastDot"></div><div id="toastMsg"></div></div>
 
-  <script>
-    // ---- API ----
-    const API = {
-      login: () => "/api/dealer/login",
-      vehicles: () => "/api/dealer/vehicles",
-      upsertVehicle: () => "/api/dealer/vehicles",
-      uploadSign: () => "/api/dealer/uploads/sign",
-    };
+<script>
+  const API = {
+    login: () => "/api/dealer/login",
+    vehicles: () => "/api/dealer/vehicles",
+    config: () => "/api/public/config",
+  };
 
-    const el = (id) => document.getElementById(id);
+  // Cloudinary config (loaded from server env)
+  const CLOUD = {
+    cloudName: "",
+    uploadPreset: "",
+    baseFolder: "mediaexclusive",
+  };
 
-    const ui = {
-      // views
-      loginView: el("loginView"),
-      dashView: el("dashView"),
+  const el = (id) => document.getElementById(id);
 
-      // login
-      dealerId: el("dealerId"),
-      passcode: el("passcode"),
-      btnLogin: el("btnLogin"),
-      btnDemo: el("btnDemo"),
-      loginStatus: el("loginStatus"),
+  const ui = {
+    topTitle: el("topTitle"),
+    topSub: el("topSub"),
+    apiDot: el("apiDot"),
+    apiText: el("apiText"),
+    btnLogout: el("btnLogout"),
 
-      // dash
-      dealerTitle: el("dealerTitle"),
-      dealerSub: el("dealerSub"),
-      apiDot: el("apiDot"),
-      apiStatus: el("apiStatus"),
-      btnRefresh: el("btnRefresh"),
-      btnAdd: el("btnAdd"),
-      btnLogout: el("btnLogout"),
-      q: el("q"),
-      filterStatus: el("filterStatus"),
-      sort: el("sort"),
-      dashStatus: el("dashStatus"),
-      tbody: el("tbody"),
-      count: el("count"),
-      lastUpdated: el("lastUpdated"),
+    loginView: el("loginView"),
+    dashView: el("dashView"),
 
-      // modal
-      backdrop: el("backdrop"),
-      mClose: el("mClose"),
-      btnCancel: el("btnCancel"),
-      btnSave: el("btnSave"),
-      mTitle: el("mTitle"),
-      mSub: el("mSub"),
-      mStatusLine: el("mStatusLine"),
+    dealerId: el("dealerId"),
+    passcode: el("passcode"),
+    btnLogin: el("btnLogin"),
+    btnDemo: el("btnDemo"),
+    loginStatus: el("loginStatus"),
 
-      // fields
-      vId: el("vId"),
-      vStatus: el("vStatus"),
-      vMake: el("vMake"),
-      vModel: el("vModel"),
-      vYear: el("vYear"),
-      vPrice: el("vPrice"),
-      vTitle: el("vTitle"),
-      vTrans: el("vTrans"),
-      vFuel: el("vFuel"),
-      vBody: el("vBody"),
-      vColor: el("vColor"),
-      vLoc: el("vLoc"),
-      vNotes: el("vNotes"),
+    cfgLine: el("cfgLine"),
 
-      // photos
-      files: el("files"),
-      heroPick: el("heroPick"),
-      photoGrid: el("photoGrid"),
-      uploadLine: el("uploadLine"),
+    q: el("q"),
+    filterStatus: el("filterStatus"),
+    sort: el("sort"),
+    btnRefresh: el("btnRefresh"),
+    btnAdd: el("btnAdd"),
+    dashStatus: el("dashStatus"),
+    count: el("count"),
+    lastUpdated: el("lastUpdated"),
+    tbody: el("tbody"),
 
-      // toast
-      toast: el("toast"),
-      toastDot: el("toastDot"),
-      toastMsg: el("toastMsg"),
-    };
+    backdrop: el("backdrop"),
+    mClose: el("mClose"),
+    btnCancel: el("btnCancel"),
+    btnSave: el("btnSave"),
+    mTitle: el("mTitle"),
+    mSub: el("mSub"),
+    mStatus: el("mStatus"),
 
-    const state = {
-      token: null,
-      dealerId: null,
-      dealerName: null,
-      apiOnline: false,
-      vehicles: [],
-      editing: null, // current vehicle record
-      editingImages: [], // array of URLs (public)
-    };
+    vId: el("vId"),
+    vStatus: el("vStatus"),
+    vMake: el("vMake"),
+    vModel: el("vModel"),
+    vYear: el("vYear"),
+    vPrice: el("vPrice"),
+    vTitle: el("vTitle"),
+    vNotes: el("vNotes"),
 
-    // ---- boot ----
-    document.addEventListener("DOMContentLoaded", () => {
-      wire();
-      // attempt session restore
-      const saved = loadSession();
-      if (saved?.token && saved?.dealerId) {
-        state.token = saved.token;
-        state.dealerId = saved.dealerId;
-        state.dealerName = saved.dealerName || saved.dealerId;
-        state.apiOnline = true;
-        setApi("Live", "on");
-        enterDashboard();
+    files: el("files"),
+    heroPick: el("heroPick"),
+    uploadLine: el("uploadLine"),
+
+    toast: el("toast"),
+    toastDot: el("toastDot"),
+    toastMsg: el("toastMsg"),
+  };
+
+  const state = {
+    token: null,
+    dealerId: null,
+    dealerName: null,
+    vehicles: [],
+    editing: null,
+    demo: false
+  };
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    wire();
+    await loadConfig();
+    restoreSession();
+  });
+
+  function wire(){
+    ui.btnLogin.addEventListener("click", doLogin);
+    ui.btnDemo.addEventListener("click", enterDemo);
+    ui.passcode.addEventListener("keydown", (e)=>{ if(e.key==="Enter") doLogin(); });
+
+    ui.btnLogout.addEventListener("click", logout);
+
+    ui.btnRefresh.addEventListener("click", loadVehicles);
+    ui.btnAdd.addEventListener("click", ()=>openModal(null));
+
+    ui.q.addEventListener("input", render);
+    ui.filterStatus.addEventListener("change", render);
+    ui.sort.addEventListener("change", render);
+
+    ui.mClose.addEventListener("click", closeModal);
+    ui.btnCancel.addEventListener("click", closeModal);
+    ui.backdrop.addEventListener("click", (e)=>{ if(e.target===ui.backdrop) closeModal(); });
+
+    ui.btnSave.addEventListener("click", saveVehicleAndUpload);
+    ui.files.addEventListener("change", refreshHeroPicker);
+  }
+
+  async function loadConfig(){
+    try{
+      const res = await fetch(API.config(), { headers:{ "Accept":"application/json" } });
+      const data = await res.json().catch(()=>null);
+      if(!res.ok || !data || data.ok !== true) throw new Error("config load failed");
+      CLOUD.cloudName = data.cloudinary?.cloudName || "";
+      CLOUD.uploadPreset = data.cloudinary?.uploadPreset || "";
+      CLOUD.baseFolder = data.cloudinary?.baseFolder || "mediaexclusive";
+
+      if(!CLOUD.cloudName || !CLOUD.uploadPreset){
+        ui.cfgLine.textContent = "Cloudinary config missing. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET on Cloud Run.";
+        ui.cfgLine.classList.add("error");
+      } else {
+        ui.cfgLine.textContent = `Cloudinary ready: ${CLOUD.cloudName} · folder: ${CLOUD.baseFolder}`;
       }
+    }catch{
+      ui.cfgLine.textContent = "Could not load Cloudinary config from server.";
+      ui.cfgLine.classList.add("error");
+    }
+  }
+
+  function restoreSession(){
+    const token = localStorage.getItem("dealer_token");
+    const dealerId = localStorage.getItem("dealer_id");
+    const dealerName = localStorage.getItem("dealer_name");
+    if(token && dealerId){
+      state.token = token;
+      state.dealerId = dealerId;
+      state.dealerName = dealerName || dealerId;
+      state.demo = false;
+      setApi("Live", "on");
+      enterDashboard();
+    } else {
+      setApi("Offline", "err");
+      ui.btnLogout.disabled = true;
+    }
+  }
+
+  async function doLogin(){
+    const dealerId = (ui.dealerId.value || "").trim();
+    const passcode = (ui.passcode.value || "").trim();
+    if(!dealerId || !passcode){
+      setLoginStatus("Enter Dealer ID + passcode.", true);
+      return;
+    }
+    setLoginStatus("Signing in…", false);
+
+    try{
+      const res = await fetch(API.login(), {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Accept":"application/json" },
+        body: JSON.stringify({ dealerId, passcode })
+      });
+      const data = await res.json().catch(()=>null);
+      if(!res.ok || !data || data.ok !== true) throw new Error(data?.error || "Login failed");
+
+      state.token = data.token;
+      state.dealerId = data.dealerId || dealerId;
+      state.dealerName = data.dealerName || dealerId;
+      state.demo = false;
+
+      localStorage.setItem("dealer_token", state.token);
+      localStorage.setItem("dealer_id", state.dealerId);
+      localStorage.setItem("dealer_name", state.dealerName);
+
+      setApi("Live", "on");
+      enterDashboard();
+      toast("Signed in.", "success");
+    }catch(e){
+      setLoginStatus(String(e?.message || "Login failed"), true);
+      setApi("Error", "err");
+      toast("Login failed.", "error");
+    }
+  }
+
+  function enterDemo(){
+    state.demo = true;
+    state.token = "demo-token";
+    state.dealerId = "DEALER-0001";
+    state.dealerName = "Demo Dealer";
+    state.vehicles = demoVehicles();
+    setApi("Demo", "off");
+    enterDashboard();
+    render();
+    toast("Demo mode.", "success");
+  }
+
+  function logout(){
+    state.token = null;
+    state.dealerId = null;
+    state.dealerName = null;
+    state.vehicles = [];
+    state.demo = false;
+    localStorage.removeItem("dealer_token");
+    localStorage.removeItem("dealer_id");
+    localStorage.removeItem("dealer_name");
+
+    ui.dashView.classList.add("hidden");
+    ui.loginView.classList.remove("hidden");
+    ui.btnLogout.disabled = true;
+    ui.topTitle.textContent = "Dealer Portal";
+    ui.topSub.textContent = "Log in to manage inventory + photos.";
+    setLoginStatus("", false);
+    setApi("Offline", "err");
+    toast("Logged out.", "success");
+  }
+
+  function enterDashboard(){
+    ui.loginView.classList.add("hidden");
+    ui.dashView.classList.remove("hidden");
+    ui.btnLogout.disabled = false;
+
+    ui.topTitle.textContent = state.dealerName || "Dealer Portal";
+    ui.topSub.textContent = `${state.dealerId || ""} · inventory & media`;
+    loadVehicles();
+  }
+
+  async function loadVehicles(){
+    ui.dashStatus.textContent = state.demo ? "Demo inventory loaded." : "Loading vehicles…";
+    if(state.demo){
+      ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
+      render();
+      return;
+    }
+
+    try{
+      const res = await fetch(API.vehicles(), {
+        headers:{
+          "Accept":"application/json",
+          "Authorization":"Bearer " + state.token
+        }
+      });
+      const data = await res.json().catch(()=>null);
+      if(!res.ok || !data || data.ok !== true) throw new Error(data?.error || "Failed to load");
+
+      state.vehicles = normalize(data.vehicles || []);
+      ui.dashStatus.textContent = "Ready.";
+      ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
+      setApi("Live", "on");
+      render();
+    }catch(e){
+      ui.dashStatus.textContent = String(e?.message || "Could not load vehicles.");
+      setApi("Error", "err");
+      toast("Failed to load inventory.", "error");
+    }
+  }
+
+  function render(){
+    const q = (ui.q.value || "").trim().toLowerCase();
+    const fs = (ui.filterStatus.value || "").trim().toLowerCase();
+    const sort = ui.sort.value || "newest";
+
+    let list = [...state.vehicles];
+
+    if(q) list = list.filter(v => blob(v).includes(q));
+    if(fs) list = list.filter(v => (String(v.status||"available").toLowerCase() === fs));
+
+    list.sort((a,b)=>{
+      if(sort==="priceAsc") return (a.price||0)-(b.price||0);
+      if(sort==="priceDesc") return (b.price||0)-(a.price||0);
+      if(sort==="yearAsc") return (a.year||0)-(b.year||0);
+      if(sort==="yearDesc") return (b.year||0)-(a.year||0);
+      return new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime();
     });
 
-    function wire(){
-      ui.btnLogin.addEventListener("click", doLogin);
-      ui.btnDemo.addEventListener("click", enterDemo);
-      ui.passcode.addEventListener("keydown", (e) => { if(e.key === "Enter") doLogin(); });
+    ui.tbody.innerHTML = "";
+    ui.count.textContent = String(list.length);
 
-      ui.btnLogout.addEventListener("click", logout);
-      ui.btnRefresh.addEventListener("click", loadVehicles);
-      ui.btnAdd.addEventListener("click", () => openModal(null));
-
-      ui.q.addEventListener("keydown", (e) => { if(e.key === "Enter") render(); });
-      ui.filterStatus.addEventListener("change", render);
-      ui.sort.addEventListener("change", render);
-
-      ui.mClose.addEventListener("click", closeModal);
-      ui.btnCancel.addEventListener("click", closeModal);
-      ui.backdrop.addEventListener("click", (e) => { if(e.target === ui.backdrop) closeModal(); });
-
-      ui.btnSave.addEventListener("click", saveVehicleFlow);
-
-      ui.files.addEventListener("change", () => {
-        if (!state.apiOnline) {
-          setUploadLine("Demo mode: uploads disabled.", true);
-          return;
-        }
-        const n = ui.files.files ? ui.files.files.length : 0;
-        setUploadLine(n ? `${n} file(s) selected.` : "", false);
-      });
-    }
-
-    // ---- auth ----
-    async function doLogin(){
-      const dealerId = (ui.dealerId.value || "").trim();
-      const passcode = (ui.passcode.value || "").trim();
-      if(!dealerId || !passcode){
-        setLoginStatus("Enter Dealer ID + passcode.", true);
-        return;
-      }
-      setLoginStatus("Signing in…", false);
-
-      try{
-        const res = await fetch(API.login(), {
-          method:"POST",
-          headers:{ "Content-Type":"application/json", "Accept":"application/json" },
-          body: JSON.stringify({ dealerId, passcode })
-        });
-
-        const data = await safeJson(res);
-        if(!res.ok || !data?.ok) throw new Error(data?.error || "Login failed");
-
-        state.apiOnline = true;
-        state.token = data.token;
-        state.dealerId = data.dealerId || dealerId;
-        state.dealerName = data.dealerName || dealerId;
-
-        saveSession();
-        setApi("Live", "on");
-        enterDashboard();
-        toast("Signed in.", "success");
-      }catch(e){
-        setLoginStatus(String(e?.message || "Login failed"), true);
-        setApi("Error", "err");
-      }
-    }
-
-    function enterDemo(){
-      state.apiOnline = false;
-      state.token = "demo-token";
-      state.dealerId = "DEALER-0001";
-      state.dealerName = "Demo Dealer";
-      state.vehicles = demoVehicles();
-      setApi("Demo", "warn");
-      enterDashboard();
-      render();
-      toast("Demo mode enabled.", "success");
-    }
-
-    function enterDashboard(){
-      ui.loginView.classList.add("hidden");
-      ui.dashView.classList.remove("hidden");
-      ui.dealerTitle.textContent = state.dealerName || "Dealer";
-      ui.dealerSub.textContent = `${state.dealerId || ""} · inventory manager`;
-      loadVehicles();
-    }
-
-    function logout(){
-      clearSession();
-      state.token = null;
-      state.dealerId = null;
-      state.dealerName = null;
-      state.vehicles = [];
-      state.apiOnline = false;
-
-      ui.dashView.classList.add("hidden");
-      ui.loginView.classList.remove("hidden");
-      ui.loginStatus.textContent = "";
-      setApi("—", "warn");
-      toast("Logged out.", "success");
-    }
-
-    // ---- data ----
-    async function loadVehicles(){
-      ui.dashStatus.textContent = state.apiOnline ? "Loading vehicles…" : "Demo inventory loaded.";
-      ui.lastUpdated.textContent = "—";
-
-      if(!state.apiOnline){
-        ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
-        render();
-        return;
-      }
-
-      try{
-        const res = await fetch(API.vehicles(), {
-          headers:{
-            "Accept":"application/json",
-            "Authorization":"Bearer " + state.token
-          }
-        });
-
-        const data = await safeJson(res);
-        if(res.status === 401){
-          // token expired/invalid
-          toast("Session expired. Please sign in again.", "error");
-          logout();
-          return;
-        }
-        if(!res.ok || !data?.ok || !Array.isArray(data.vehicles)) throw new Error(data?.error || "Bad response");
-
-        state.vehicles = normalize(data.vehicles);
-        ui.dashStatus.textContent = "Ready.";
-        ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
-        setApi("Live", "on");
-        render();
-      }catch(e){
-        ui.dashStatus.textContent = "Could not load vehicles.";
-        setApi("Error", "err");
-        toast(String(e?.message || "Failed to load inventory."), "error");
-      }
-    }
-
-    function render(){
-      const q = (ui.q.value || "").trim().toLowerCase();
-      const fs = (ui.filterStatus.value || "").toLowerCase();
-      const sort = ui.sort.value || "newest";
-
-      let list = [...state.vehicles];
-
-      if(q) list = list.filter(v => blob(v).includes(q));
-      if(fs) list = list.filter(v => (String(v.status || "draft").toLowerCase() === fs));
-
-      list.sort((a,b)=>{
-        if(sort==="priceAsc") return (a.price||0)-(b.price||0);
-        if(sort==="priceDesc") return (b.price||0)-(a.price||0);
-        if(sort==="yearAsc") return (a.year||0)-(b.year||0);
-        if(sort==="yearDesc") return (b.year||0)-(a.year||0);
-        return new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime();
-      });
-
-      ui.tbody.innerHTML = "";
-      ui.count.textContent = String(list.length);
-
-      if(!list.length){
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 5;
-        td.style.color = "var(--muted)";
-        td.style.padding = "14px";
-        td.textContent = "No vehicles match your filters.";
-        tr.appendChild(td);
-        ui.tbody.appendChild(tr);
-        return;
-      }
-
-      list.forEach(v => {
-        const tr = document.createElement("tr");
-        tr.style.cursor = "pointer";
-        tr.addEventListener("click", () => openModal(v));
-
-        tr.appendChild(tdHtml(`
-          <div class="mono">${esc(v.vehicleId)}</div>
-          <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(v.make)} ${esc(v.model)}${v.year ? " · " + esc(String(v.year)) : ""}</div>
-        `));
-
-        tr.appendChild(tdHtml(statusPill(v.status)));
-
-        tr.appendChild(tdHtml(`<div style="font-weight:950">${money(v.price)}</div>`));
-
-        const imgCount = (v.images || []).length;
-        tr.appendChild(tdHtml(`<span class="mono">${imgCount}</span>`));
-
-        tr.appendChild(tdHtml(`<span class="mono">${esc(shortTime(v.updatedAt || v.createdAt || ""))}</span>`));
-
-        ui.tbody.appendChild(tr);
-      });
-    }
-
-    function tdHtml(html){
+    if(!list.length){
+      const tr = document.createElement("tr");
       const td = document.createElement("td");
-      td.innerHTML = html;
-      return td;
+      td.colSpan = 5;
+      td.style.color = "var(--muted)";
+      td.style.padding = "14px";
+      td.textContent = "No vehicles match your filters.";
+      tr.appendChild(td);
+      ui.tbody.appendChild(tr);
+      return;
     }
 
-    // ---- modal ----
-    function openModal(v){
-      state.editing = v ? {...v} : null;
-      state.editingImages = Array.isArray(v?.images) ? [...v.images] : [];
+    list.forEach(v=>{
+      const tr = document.createElement("tr");
+      tr.addEventListener("click", ()=>openModal(v));
 
-      ui.mTitle.textContent = v ? "Edit vehicle" : "Add vehicle";
-      ui.mSub.textContent = "Save details, then upload photos.";
-      ui.mStatusLine.textContent = "";
-      ui.mStatusLine.classList.remove("error");
-      setUploadLine("", false);
+      const td1 = document.createElement("td");
+      td1.innerHTML = `<div class="mono">${esc(v.vehicleId)}</div>
+                       <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(v.make)} ${esc(v.model)}</div>`;
 
-      ui.vId.value = v?.vehicleId || "";
-      ui.vStatus.value = (v?.status || "available").toLowerCase();
-      ui.vMake.value = v?.make || "";
-      ui.vModel.value = v?.model || "";
-      ui.vYear.value = v?.year || "";
-      ui.vPrice.value = v?.price || "";
-      ui.vTitle.value = v?.title || "";
-      ui.vTrans.value = v?.transmission || "";
-      ui.vFuel.value = v?.fuel || "";
-      ui.vBody.value = v?.bodyType || "";
-      ui.vColor.value = v?.color || "";
-      ui.vLoc.value = v?.location || "";
-      ui.vNotes.value = v?.notes || "";
-      ui.files.value = "";
+      const td2 = document.createElement("td");
+      td2.innerHTML = `<div>${esc(v.year?String(v.year):"—")}</div>
+                       <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(v.title||"")}</div>`;
 
-      rebuildHeroPick(v?.heroImage || "");
-      renderThumbs();
+      const td3 = document.createElement("td");
+      const s = String(v.status||"available").toLowerCase();
+      td3.innerHTML = `<span class="tag ${esc(s)}">${esc(s)}</span>`;
 
-      ui.backdrop.classList.add("show");
-      ui.backdrop.setAttribute("aria-hidden","false");
+      const td4 = document.createElement("td");
+      td4.innerHTML = `<div style="font-weight:900">${money(v.price)}</div>`;
+
+      const td5 = document.createElement("td");
+      td5.innerHTML = `<div>${(v.images||[]).length} photos</div>
+                       <div style="color:var(--muted);font-size:11px;margin-top:2px">${v.heroImage ? "Hero set" : "No hero"}</div>`;
+
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5);
+      ui.tbody.appendChild(tr);
+    });
+  }
+
+  function openModal(v){
+    state.editing = v ? deepClone(v) : null;
+    ui.mTitle.textContent = v ? "Edit vehicle" : "Add vehicle";
+    ui.mStatus.textContent = "";
+    ui.mStatus.classList.remove("error");
+    ui.uploadLine.textContent = "";
+
+    ui.vId.value = v?.vehicleId || "";
+    ui.vStatus.value = (v?.status || "available").toLowerCase();
+    ui.vMake.value = v?.make || "";
+    ui.vModel.value = v?.model || "";
+    ui.vYear.value = v?.year || "";
+    ui.vPrice.value = v?.price || "";
+    ui.vTitle.value = v?.title || "";
+    ui.vNotes.value = v?.notes || "";
+    ui.files.value = "";
+
+    refreshHeroPicker(v?.images || []);
+    ui.backdrop.classList.add("show");
+    ui.backdrop.setAttribute("aria-hidden","false");
+  }
+
+  function closeModal(){
+    ui.backdrop.classList.remove("show");
+    ui.backdrop.setAttribute("aria-hidden","true");
+    state.editing = null;
+  }
+
+  function refreshHeroPicker(existingImages){
+    const imgs = Array.isArray(existingImages) ? existingImages.slice() : [];
+    const newFiles = ui.files.files ? Array.from(ui.files.files) : [];
+
+    ui.heroPick.innerHTML = "";
+    const optAuto = document.createElement("option");
+    optAuto.value = "auto";
+    optAuto.textContent = "Auto (first photo)";
+    ui.heroPick.appendChild(optAuto);
+
+    imgs.forEach((u, i)=>{
+      const o = document.createElement("option");
+      o.value = "existing:" + i;
+      o.textContent = `Existing #${i+1}`;
+      ui.heroPick.appendChild(o);
+    });
+
+    newFiles.forEach((f, i)=>{
+      const o = document.createElement("option");
+      o.value = "new:" + i;
+      o.textContent = `New: ${f.name}`;
+      ui.heroPick.appendChild(o);
+    });
+  }
+
+  async function saveVehicleAndUpload(){
+    const payload = buildPayload();
+    if(!payload.make || !payload.model){
+      setMStatus("Make + Model are required.", true);
+      return;
+    }
+    if(!CLOUD.cloudName || !CLOUD.uploadPreset){
+      setMStatus("Cloudinary config missing (check Cloud Run env vars).", true);
+      return;
     }
 
-    function closeModal(){
-      ui.backdrop.classList.remove("show");
-      ui.backdrop.setAttribute("aria-hidden","true");
-      state.editing = null;
-      state.editingImages = [];
-      ui.files.value = "";
-    }
+    ui.btnSave.disabled = true;
+    ui.uploadLine.textContent = "";
+    setMStatus("Saving…", false);
 
-    function rebuildHeroPick(currentHero){
-      ui.heroPick.innerHTML = `<option value="">Auto (first photo)</option>`;
-      for (const url of state.editingImages){
-        const opt = document.createElement("option");
-        opt.value = url;
-        opt.textContent = trimUrl(url);
-        ui.heroPick.appendChild(opt);
-      }
-      if (currentHero && state.editingImages.includes(currentHero)) ui.heroPick.value = currentHero;
-      else ui.heroPick.value = "";
-    }
-
-    function renderThumbs(){
-      ui.photoGrid.innerHTML = "";
-      if (!state.editingImages.length){
-        ui.photoGrid.innerHTML = `<div class="hint" style="grid-column:1/-1">No photos yet. Add photos below.</div>`;
-        rebuildHeroPick("");
-        return;
-      }
-      state.editingImages.forEach((url, idx) => {
-        const wrap = document.createElement("div");
-        wrap.className = "thumb";
-        wrap.innerHTML = `
-          <img src="${escAttr(url)}" alt="photo ${idx+1}" />
-          <button class="rm" type="button" title="Remove">×</button>
-        `;
-        wrap.querySelector(".rm").addEventListener("click", (e) => {
-          e.stopPropagation();
-          state.editingImages = state.editingImages.filter(u => u !== url);
-          renderThumbs();
-        });
-        ui.photoGrid.appendChild(wrap);
-      });
-      rebuildHeroPick(state.editing?.heroImage || "");
-    }
-
-    // ---- save + upload flow ----
-    async function saveVehicleFlow(){
-      if(!state.apiOnline){
-        setMStatus("Demo mode: saving disabled.", true);
-        return;
-      }
-      if(!state.token){
-        setMStatus("Not signed in.", true);
-        return;
-      }
-
-      ui.btnSave.disabled = true;
-      setMStatus("Saving…", false);
-
-      try{
-        // 1) upsert vehicle first (ensures vehicleId exists)
-        const vehicleId = (ui.vId.value || "").trim() || genVehicleId();
-
-        const basePayload = {
-          vehicleId,
-          status: (ui.vStatus.value || "available").toLowerCase(),
-          make: (ui.vMake.value || "").trim(),
-          model: (ui.vModel.value || "").trim(),
-          year: numOrNull(ui.vYear.value),
-          price: num(ui.vPrice.value),
-          title: (ui.vTitle.value || "").trim(),
-          notes: (ui.vNotes.value || "").trim(),
-
-          // these fields are fine for UI but server ignores unknown ones — keeping for future expansion
-          transmission: (ui.vTrans.value || "").trim(),
-          fuel: (ui.vFuel.value || "").trim(),
-          bodyType: (ui.vBody.value || "").trim(),
-          color: (ui.vColor.value || "").trim(),
-          location: (ui.vLoc.value || "").trim(),
-
-          // IMPORTANT: send images/heroImage that we already have
-          images: [...state.editingImages],
-          heroImage: (ui.heroPick.value || "").trim(),
-        };
-
-        if(!basePayload.make || !basePayload.model){
-          throw new Error("Make + Model are required.");
-        }
-
-        const firstSave = await apiJson(API.upsertVehicle(), basePayload);
-        const savedVehicle = firstSave?.vehicle || basePayload;
-
-        // 2) upload files (if any)
-        const files = ui.files.files ? Array.from(ui.files.files) : [];
-        if(files.length){
-          setUploadLine("Uploading photos…", false);
-          const uploadedUrls = await uploadImagesSigned(savedVehicle.vehicleId, files);
-          // merge + de-dupe
-          const merged = dedupe([...state.editingImages, ...uploadedUrls]);
-
-          state.editingImages = merged;
-          renderThumbs();
-
-          // 3) update vehicle with images + hero
-          const hero = (ui.heroPick.value || "").trim() || merged[0] || "";
-          setMStatus("Saving photos to vehicle…", false);
-
-          const secondSave = await apiJson(API.upsertVehicle(), {
-            ...basePayload,
-            vehicleId: savedVehicle.vehicleId,
-            images: merged,
-            heroImage: hero,
-          });
-
-          setUploadLine(`Uploaded ${uploadedUrls.length} photo(s).`, false);
-          toast("Vehicle saved + photos uploaded.", "success");
-        } else {
-          toast("Vehicle saved.", "success");
-        }
-
-        await loadVehicles();
-        closeModal();
-      }catch(e){
-        const msg = String(e?.message || "Save failed.");
-        setMStatus(msg, true);
-        toast(msg, "error");
-      }finally{
-        ui.btnSave.disabled = false;
-      }
-    }
-
-    async function uploadImagesSigned(vehicleId, files){
-      const out = [];
-      for (let i = 0; i < files.length; i++){
-        const f = files[i];
-        setUploadLine(`Uploading ${i+1}/${files.length}: ${f.name}`, false);
-
-        // 1) request signed url from backend
-        const sign = await apiJson(API.uploadSign(), {
-          vehicleId,
-          type: "image",
-          filename: f.name,
-          contentType: f.type || "application/octet-stream"
-        });
-
-        if (!sign?.url || !sign?.publicUrl) throw new Error("Upload signing failed.");
-
-        // 2) PUT directly to GCS signed url
-        const putRes = await fetch(sign.url, {
-          method: "PUT",
-          headers: { "Content-Type": f.type || "application/octet-stream" },
-          body: f
-        });
-
-        if(!putRes.ok){
-          const t = await putRes.text().catch(()=> "");
-          throw new Error(`Upload failed (${putRes.status}). ${t ? t.slice(0,120) : ""}`.trim());
-        }
-
-        out.push(sign.publicUrl);
-      }
-      return out;
-    }
-
-    // ---- helpers ----
-    function setLoginStatus(msg, err){
-      ui.loginStatus.textContent = msg || "";
-      ui.loginStatus.classList.toggle("error", !!err);
-    }
-    function setMStatus(msg, err){
-      ui.mStatusLine.textContent = msg || "";
-      ui.mStatusLine.classList.toggle("error", !!err);
-    }
-    function setUploadLine(msg, err){
-      ui.uploadLine.textContent = msg || "";
-      ui.uploadLine.classList.toggle("error", !!err);
-    }
-
-    function setApi(text, mode){
-      ui.apiStatus.textContent = text || "—";
-      ui.apiDot.classList.remove("on","err");
-      if(mode==="on") ui.apiDot.classList.add("on");
-      if(mode==="err") ui.apiDot.classList.add("err");
-      if(mode==="warn"){} // default yellow dot
-    }
-
-    function toast(message, type){
-      ui.toastMsg.textContent = message || "";
-      ui.toast.classList.remove("success","error");
-      if(type==="success"){ ui.toast.classList.add("success"); ui.toastDot.style.background="#16a34a"; }
-      else if(type==="error"){ ui.toast.classList.add("error"); ui.toastDot.style.background="#ef4444"; }
-      else ui.toastDot.style.background="var(--accent)";
-      ui.toast.classList.add("show");
-      clearTimeout(window.__t);
-      window.__t = setTimeout(()=>ui.toast.classList.remove("show"), 3200);
-    }
-
-    async function apiJson(url, body){
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type":"application/json",
-          "Accept":"application/json",
-          "Authorization":"Bearer " + (state.token || "")
-        },
-        body: JSON.stringify(body || {})
+    try{
+      // Ensure we have a vehicleId first (your server will auto-generate if blank)
+      const savedBase = await saveVehicle({
+        vehicleId: payload.vehicleId || "",
+        title: payload.title,
+        make: payload.make,
+        model: payload.model,
+        year: payload.year,
+        price: payload.price,
+        status: payload.status,
+        notes: payload.notes,
+        images: payload.images || [],
+        heroImage: payload.heroImage || "",
       });
 
-      const data = await safeJson(res);
-      if(res.status === 401){
-        toast("Session expired. Please sign in again.", "error");
-        logout();
-        throw new Error("Unauthorized");
+      const files = ui.files.files ? Array.from(ui.files.files) : [];
+      let uploadedUrls = [];
+
+      if(files.length && !state.demo){
+        ui.uploadLine.textContent = `Uploading ${files.length} photo(s)…`;
+        uploadedUrls = await uploadFilesToCloudinary(savedBase.vehicleId, files);
       }
-      if(!res.ok || !data?.ok){
-        throw new Error(data?.error || `Request failed (${res.status})`);
-      }
-      return data;
+
+      const existingImages = Array.isArray(payload.images) ? payload.images : [];
+      const mergedImages = [...existingImages, ...uploadedUrls];
+
+      const heroImage = pickHero({
+        heroPick: ui.heroPick.value,
+        existingImages,
+        newUploaded: uploadedUrls
+      });
+
+      // Final save with image URLs so Sheets/storefront has them
+      const finalSaved = await saveVehicle({
+        vehicleId: savedBase.vehicleId,
+        title: payload.title,
+        make: payload.make,
+        model: payload.model,
+        year: payload.year,
+        price: payload.price,
+        status: payload.status,
+        notes: payload.notes,
+        images: mergedImages,
+        heroImage: heroImage || ""
+      });
+
+      toast(files.length ? "Vehicle saved + photos uploaded." : "Vehicle saved.", "success");
+      closeModal();
+      await loadVehicles();
+      return finalSaved;
+    }catch(e){
+      setMStatus(String(e?.message || "Save failed."), true);
+      toast("Save failed.", "error");
+    }finally{
+      ui.btnSave.disabled = false;
+    }
+  }
+
+  function buildPayload(){
+    const vehicleId = (ui.vId.value || "").trim();
+    return {
+      vehicleId: vehicleId || "",
+      status: (ui.vStatus.value || "available").toLowerCase(),
+      make: (ui.vMake.value || "").trim(),
+      model: (ui.vModel.value || "").trim(),
+      year: numOrNull(ui.vYear.value),
+      price: num(ui.vPrice.value),
+      title: (ui.vTitle.value || "").trim(),
+      notes: (ui.vNotes.value || "").trim(),
+      images: Array.isArray(state.editing?.images) ? state.editing.images : [],
+      heroImage: (state.editing?.heroImage || "")
+    };
+  }
+
+  async function saveVehicle(payload){
+    if(state.demo){
+      const id = payload.vehicleId || genVehicleId();
+      const merged = {
+        ...payload,
+        vehicleId: id,
+        dealerId: state.dealerId,
+        updatedAt: new Date().toISOString()
+      };
+      const idx = state.vehicles.findIndex(x=>x.vehicleId===id);
+      if(idx>-1) state.vehicles[idx] = { ...state.vehicles[idx], ...merged };
+      else state.vehicles.unshift(merged);
+      return merged;
     }
 
-    async function safeJson(res){
-      try { return await res.json(); }
-      catch { return null; }
-    }
+    const res = await fetch(API.vehicles(), {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Accept":"application/json",
+        "Authorization":"Bearer " + state.token
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(()=>null);
+    if(!res.ok || !data || data.ok !== true) throw new Error(data?.error || "Vehicle save failed");
+    return normalize([data.vehicle])[0];
+  }
 
-    function normalize(list){
-      return (list||[]).map(v => ({
-        vehicleId: v.vehicleId || v.id || genVehicleId(),
-        dealerId: v.dealerId || state.dealerId || "",
-        make: v.make || "",
-        model: v.model || "",
-        year: typeof v.year === "number" ? v.year : numOrNull(v.year),
-        price: typeof v.price === "number" ? v.price : num(v.price),
-        status: String(v.status || "draft").toLowerCase(),
-        title: v.title || "",
-        notes: v.notes || "",
-        heroImage: v.heroImage || "",
-        images: Array.isArray(v.images) ? v.images : [],
-        updatedAt: v.updatedAt || v.createdAt || "",
-        createdAt: v.createdAt || "",
-        transmission: v.transmission || "",
-        fuel: v.fuel || "",
-        bodyType: v.bodyType || "",
-        color: v.color || "",
-        location: v.location || "",
-      }));
-    }
+  async function uploadOneToCloudinary(vehicleId, file){
+    const url = `https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUD.cloudName)}/image/upload`;
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("upload_preset", CLOUD.uploadPreset);
 
-    function demoVehicles(){
-      const twoDays = new Date(Date.now()-86400000*2).toISOString();
-      const sixDays = new Date(Date.now()-86400000*6).toISOString();
-      const oneDay = new Date(Date.now()-86400000*1).toISOString();
-      return normalize([
-        { vehicleId:"VEH-10021", dealerId:"DEALER-0001", make:"Toyota", model:"Vitz", year:2018, price:1250000, status:"available", title:"2018 Toyota Vitz — Clean unit", notes:"Clean unit.", images:[], updatedAt: twoDays },
-        { vehicleId:"VEH-10022", dealerId:"DEALER-0001", make:"Honda", model:"Civic", year:2017, price:2200000, status:"pending", title:"2017 Honda Civic — Pending", notes:"Pending deposit.", images:[], updatedAt: sixDays },
-        { vehicleId:"VEH-10023", dealerId:"DEALER-0001", make:"BMW", model:"3 Series", year:2016, price:3950000, status:"available", title:"2016 BMW 3 Series — Premium", notes:"Premium interior.", images:[], updatedAt: oneDay },
-      ]);
-    }
+    // Folder strategy: baseFolder/dealers/<dealerId>/vehicles/<vehicleId>
+    const folder = `${CLOUD.baseFolder}/dealers/${state.dealerId}/vehicles/${vehicleId}`;
+    fd.append("folder", folder);
 
-    function blob(v){
-      return [
-        v.vehicleId, v.make, v.model, v.year, v.status, v.title, v.notes
-      ].filter(Boolean).join(" ").toLowerCase();
-    }
+    // Optional: keep original filename vibe
+    // fd.append("use_filename", "true");
+    // fd.append("unique_filename", "true");
 
-    function money(n){
-      n = num(n);
-      if(!n) return "Price on request";
-      return "JMD " + n.toLocaleString(undefined,{maximumFractionDigits:0});
+    const res = await fetch(url, { method:"POST", body: fd });
+    const json = await res.json().catch(()=>null);
+    if(!res.ok){
+      const msg = json?.error?.message || `Cloudinary upload failed (${res.status})`;
+      throw new Error(msg);
     }
+    return json.secure_url || json.url;
+  }
 
-    function fmt(d){
-      const dt = (d instanceof Date)?d:new Date(d);
-      const day = String(dt.getDate()).padStart(2,"0");
-      const mon = String(dt.getMonth()+1).padStart(2,"0");
-      const yr = String(dt.getFullYear()).slice(-2);
-      const hr = String(dt.getHours()).padStart(2,"0");
-      const mi = String(dt.getMinutes()).padStart(2,"0");
-      return `${day}/${mon}/${yr} ${hr}:${mi}`;
+  async function uploadFilesToCloudinary(vehicleId, files){
+    const out = [];
+    for(let i=0;i<files.length;i++){
+      const f = files[i];
+      ui.uploadLine.textContent = `Uploading ${i+1}/${files.length}: ${f.name}`;
+      const secureUrl = await uploadOneToCloudinary(vehicleId, f);
+      out.push(secureUrl);
     }
+    ui.uploadLine.textContent = `Uploaded ${out.length}/${files.length}.`;
+    return out;
+  }
 
-    function shortTime(iso){
-      if(!iso) return "—";
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return String(iso).slice(0,16);
-      return fmt(d);
+  function pickHero({ heroPick, existingImages, newUploaded }){
+    if(heroPick === "auto"){
+      return (newUploaded[0] || existingImages[0] || "");
     }
+    if(heroPick.startsWith("existing:")){
+      const idx = Number(heroPick.split(":")[1]||0);
+      return existingImages[idx] || "";
+    }
+    if(heroPick.startsWith("new:")){
+      const idx = Number(heroPick.split(":")[1]||0);
+      return newUploaded[idx] || (newUploaded[0]||"");
+    }
+    return "";
+  }
 
-    function num(v){
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    }
-    function numOrNull(v){
-      const n = Number(v);
-      return Number.isFinite(n) && n !== 0 ? n : (String(v||"").trim() ? n : null);
-    }
-    function genVehicleId(){
-      return "VEH-" + Math.random().toString(16).slice(2,8).toUpperCase();
-    }
+  function setApi(text, mode){
+    ui.apiText.textContent = text || "—";
+    ui.apiDot.classList.remove("on","err");
+    if(mode==="on") ui.apiDot.classList.add("on");
+    if(mode==="err") ui.apiDot.classList.add("err");
+  }
+  function setLoginStatus(msg, err){
+    ui.loginStatus.textContent = msg || "";
+    ui.loginStatus.classList.toggle("error", !!err);
+  }
+  function setMStatus(msg, err){
+    ui.mStatus.textContent = msg || "";
+    ui.mStatus.classList.toggle("error", !!err);
+  }
+  function toast(message, type){
+    ui.toastMsg.textContent = message || "";
+    ui.toast.classList.remove("success","error");
+    if(type==="success"){ ui.toast.classList.add("success"); ui.toastDot.style.background="#22c55e"; }
+    else if(type==="error"){ ui.toast.classList.add("error"); ui.toastDot.style.background="#fb7185"; }
+    else ui.toastDot.style.background="var(--brand)";
+    ui.toast.classList.add("show");
+    clearTimeout(window.__t);
+    window.__t = setTimeout(()=>ui.toast.classList.remove("show"), 3200);
+  }
 
-    function statusPill(s){
-      const v = String(s||"draft").toLowerCase();
-      const cls = v==="available" ? "available" : v==="pending" ? "pending" : v==="sold" ? "sold" : "draft";
-      return `<span class="status ${cls}">${esc(v)}</span>`;
-    }
+  function normalize(list){
+    return (list||[]).map(v => ({
+      vehicleId: v.vehicleId || genVehicleId(),
+      dealerId: v.dealerId || state.dealerId,
+      title: v.title || "",
+      make: v.make || "",
+      model: v.model || "",
+      year: (v.year!=null && v.year!=="") ? Number(v.year) : null,
+      price: Number(v.price||0) || 0,
+      status: (v.status || "available").toLowerCase(),
+      notes: v.notes || "",
+      heroImage: v.heroImage || "",
+      images: Array.isArray(v.images) ? v.images : [],
+      updatedAt: v.updatedAt || v.createdAt || new Date().toISOString(),
+      createdAt: v.createdAt || v.updatedAt || new Date().toISOString()
+    }));
+  }
 
-    function dedupe(arr){
-      const seen = new Set();
-      const out = [];
-      for (const x of arr){
-        const k = String(x||"").trim();
-        if(!k) continue;
-        if(seen.has(k)) continue;
-        seen.add(k);
-        out.push(k);
-      }
-      return out;
-    }
+  function demoVehicles(){
+    return normalize([
+      { vehicleId:"VEH-10021", make:"Toyota", model:"Vitz", year:2018, price:1250000, status:"available", notes:"Clean unit.", images:["x","y"] },
+      { vehicleId:"VEH-10022", make:"Honda", model:"Civic", year:2017, price:2200000, status:"pending", notes:"Pending deposit.", images:["x"] },
+    ]);
+  }
 
-    function trimUrl(u){
-      try{
-        const url = new URL(u);
-        const parts = url.pathname.split("/").filter(Boolean);
-        return parts.slice(-2).join("/");
-      }catch{
-        return String(u).slice(-22);
-      }
-    }
-
-    function esc(s){
-      return String(s ?? "")
-        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;").replaceAll("'","&#39;");
-    }
-    function escAttr(s){ return esc(s); }
-
-    // ---- session ----
-    function saveSession(){
-      try{
-        localStorage.setItem("dealerSession", JSON.stringify({
-          token: state.token,
-          dealerId: state.dealerId,
-          dealerName: state.dealerName
-        }));
-      }catch{}
-    }
-    function loadSession(){
-      try{
-        const v = localStorage.getItem("dealerSession");
-        return v ? JSON.parse(v) : null;
-      }catch{ return null; }
-    }
-    function clearSession(){
-      try{ localStorage.removeItem("dealerSession"); }catch{}
-    }
-  </script>
+  function blob(v){
+    return [v.vehicleId,v.title,v.make,v.model,v.year,v.notes]
+      .filter(Boolean).join(" ").toLowerCase();
+  }
+  function money(n){
+    const v = Number(n);
+    if(!Number.isFinite(v) || v<=0) return "Price on request";
+    return "JMD " + v.toLocaleString(undefined,{maximumFractionDigits:0});
+  }
+  function fmt(d){
+    const dt = (d instanceof Date)?d:new Date(d);
+    const day = String(dt.getDate()).padStart(2,"0");
+    const mon = String(dt.getMonth()+1).padStart(2,"0");
+    const yr = String(dt.getFullYear()).slice(-2);
+    const hr = String(dt.getHours()).padStart(2,"0");
+    const mi = String(dt.getMinutes()).padStart(2,"0");
+    return `${day}/${mon}/${yr} ${hr}:${mi}`;
+  }
+  function num(v){
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  function numOrNull(v){
+    const n = Number(v);
+    return Number.isFinite(n) && v!=="" ? n : null;
+  }
+  function genVehicleId(){
+    return "VEH-" + Math.random().toString(16).slice(2,8).toUpperCase();
+  }
+  function deepClone(x){ return JSON.parse(JSON.stringify(x||null)); }
+  function esc(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#39;");
+  }
+</script>
 </body>
 </html>
