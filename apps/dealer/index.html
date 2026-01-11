@@ -3,336 +3,290 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Carsales — Dealer Portal</title>
+  <title>Carsales SaaS – Dealer Portal</title>
 
   <style>
     :root{
-      /* White + Red (modern SaaS) */
-      --bg:#f7f7fb;
+      --bg:#fff7f7;
       --card:#ffffff;
       --ink:#0f172a;
       --muted:#64748b;
-      --muted2:#94a3b8;
 
-      --red:#ef4444;
-      --red2:#dc2626;
-      --redSoft:rgba(239,68,68,.10);
+      --accent:#ef4444;
+      --accent2:#fb7185;
+      --accentSoft: rgba(239,68,68,0.10);
 
-      --line:#e5e7eb;
-      --line2:#eef2f7;
+      --border: rgba(15,23,42,0.10);
+      --border2: rgba(239,68,68,0.25);
+
+      --shadow: 0 18px 50px rgba(15,23,42,0.10);
+      --shadow2: 0 10px 24px rgba(15,23,42,0.08);
 
       --good:#16a34a;
       --warn:#f59e0b;
       --bad:#ef4444;
 
-      --shadow: 0 18px 45px rgba(2,6,23,.08);
-      --shadow2: 0 10px 24px rgba(2,6,23,.06);
-
       --radius:18px;
-      --radius2:22px;
+      --radius2:24px;
 
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      --sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      font-family:var(--sans);
-      color:var(--ink);
+      margin:0; font-family:var(--sans); color:var(--ink);
       background:
-        radial-gradient(circle at 15% 0%, rgba(239,68,68,.10) 0, transparent 35%),
-        radial-gradient(circle at 85% 10%, rgba(239,68,68,.08) 0, transparent 40%),
+        radial-gradient(circle at 10% 0%, rgba(239,68,68,0.10), transparent 45%),
+        radial-gradient(circle at 90% 20%, rgba(251,113,133,0.10), transparent 45%),
+        radial-gradient(circle at 50% 100%, rgba(239,68,68,0.06), transparent 55%),
         var(--bg);
       -webkit-font-smoothing:antialiased;
     }
-    a{color:inherit;text-decoration:none}
+    a{color:inherit; text-decoration:none}
     .hidden{display:none!important}
 
-    /* Layout */
-    .wrap{min-height:100%; display:flex; justify-content:center; padding:18px}
-    .shell{width:100%; max-width:1200px; display:flex; flex-direction:column; gap:12px}
-
-    /* Topbar */
-    .topbar{
-      display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
-      padding:14px 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.86));
-      border:1px solid var(--line);
-      border-radius:24px;
+    .wrap{min-height:100%; display:flex; align-items:center; justify-content:center; padding:18px}
+    .card{
+      width:100%;
+      max-width:1160px;
+      background: var(--card);
+      border-radius: var(--radius2);
+      border:1px solid var(--border);
       box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
+      padding:18px;
     }
-    .brand{display:flex; gap:12px; align-items:center}
+
+    .top{
+      display:flex; flex-wrap:wrap; gap:12px;
+      justify-content:space-between; align-items:flex-start;
+      margin-bottom:14px;
+    }
+    .brand{display:flex; align-items:center; gap:12px}
     .badge{
-      width:44px;height:44px;border-radius:14px;
+      width:44px;height:44px;border-radius:16px;
+      background: radial-gradient(circle at 30% 0, #fecaca, #ef4444 55%, #7f1d1d 100%);
       display:flex;align-items:center;justify-content:center;
-      font-weight:900;color:#fff;
-      background: linear-gradient(135deg, var(--red), var(--red2));
-      box-shadow: 0 14px 28px rgba(239,68,68,.22);
+      font-weight:900;font-size:18px;color:#fff;
+      box-shadow: 0 12px 26px rgba(239,68,68,0.20);
     }
-    .brand h1{margin:0; font-size:16px; letter-spacing:.01em}
-    .brand .sub{margin-top:3px; font-size:12px; color:var(--muted)}
-    .right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .title{font-size:18px;font-weight:850; letter-spacing:0.01em}
+    .sub{font-size:12px;color:var(--muted); margin-top:3px}
+
+    .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center}
 
     .pill{
       display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px; border-radius:999px;
-      border:1px solid var(--line);
-      background:#fff;
-      box-shadow: var(--shadow2);
-      font-size:12px;
-      color:var(--muted);
+      padding:7px 10px; border-radius:999px;
+      background: rgba(15,23,42,0.03);
+      border:1px solid var(--border);
+      color: var(--muted); font-size:12px;
     }
-    .dot{
-      width:9px;height:9px;border-radius:999px;
-      background: var(--warn);
-      box-shadow: 0 0 0 4px rgba(245,158,11,.16);
-    }
-    .dot.on{background:var(--good); box-shadow: 0 0 0 4px rgba(22,163,74,.14)}
-    .dot.err{background:var(--bad); box-shadow: 0 0 0 4px rgba(239,68,68,.14)}
+    .dot{width:9px;height:9px;border-radius:999px;background:var(--warn); box-shadow:0 0 0 3px rgba(245,158,11,0.18)}
+    .dot.on{background:var(--good); box-shadow:0 0 0 3px rgba(22,163,74,0.18)}
+    .dot.err{background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,0.18)}
 
     .btn{
-      border:1px solid transparent;
-      cursor:pointer;
-      border-radius:999px;
-      padding:9px 13px;
-      font-size:12px;
-      font-weight:700;
+      border-radius:999px; border:1px solid transparent;
+      padding:9px 14px; font-size:12px; font-weight:750;
       display:inline-flex; align-items:center; gap:8px;
-      background:#fff;
-      color:var(--ink);
-      box-shadow: var(--shadow2);
-      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+      cursor:pointer; background:transparent; color:var(--ink);
+      transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
       user-select:none;
     }
-    .btn:hover{transform: translateY(-1px); box-shadow: 0 14px 28px rgba(2,6,23,.08)}
-    .btn:active{transform: translateY(0px)}
-    .btn-ghost{border-color: var(--line); background:#fff; color:var(--ink)}
-    .btn-primary{
-      background: linear-gradient(135deg, var(--red), var(--red2));
-      color:#fff;
-      border-color: rgba(0,0,0,.06);
-      box-shadow: 0 18px 34px rgba(239,68,68,.20);
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .btn-ghost{
+      border-color: var(--border);
+      background: rgba(15,23,42,0.02);
+      color: var(--ink);
     }
-    .btn-primary:hover{box-shadow: 0 22px 46px rgba(239,68,68,.26)}
-    .btn:disabled{opacity:.6; cursor:not-allowed; transform:none}
+    .btn-ghost:hover{border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.06); transform: translateY(-1px)}
+    .btn-primary{
+      background: linear-gradient(135deg, #ef4444, #fb7185);
+      border-color: rgba(15,23,42,0.15);
+      color:#fff;
+      box-shadow: 0 14px 28px rgba(239,68,68,0.22);
+    }
+    .btn-primary:hover{transform:translateY(-1px); box-shadow: 0 18px 40px rgba(239,68,68,0.28)}
+    .btn-primary:active{transform:translateY(0); filter:brightness(0.98)}
 
-    /* Cards / panels */
     .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:12px;
+      display:grid; grid-template-columns: 1fr; gap:14px;
     }
     @media(min-width:980px){
-      .grid{grid-template-columns: 0.42fr 0.58fr}
+      .grid{grid-template-columns: 0.38fr 0.62fr}
     }
-    .panel{
-      background: rgba(255,255,255,.95);
-      border:1px solid var(--line);
-      border-radius: var(--radius2);
-      box-shadow: var(--shadow);
-      padding:14px;
-    }
-    .panel h3{margin:0 0 6px; font-size:13px; letter-spacing:.02em}
-    .hint{font-size:12px; color:var(--muted); line-height:1.35}
 
-    /* Fields */
-    .field{margin-top:10px}
-    .label{
-      display:flex; justify-content:space-between; gap:8px;
-      font-size:11px; color:var(--muted);
-      margin-bottom:6px;
+    .panel{
+      background: rgba(15,23,42,0.02);
+      border:1px solid var(--border);
+      border-radius: 18px;
+      padding:12px;
+      box-shadow: var(--shadow2);
     }
+    .panel h3{margin:0 0 6px; font-size:13px; font-weight:900; letter-spacing:.02em}
+    .hint{font-size:12px;color:var(--muted); line-height:1.35}
+
+    .field{margin-top:10px}
+    .label{display:flex; justify-content:space-between; gap:10px; font-size:11px; color:var(--muted); margin-bottom:6px}
     .input,.select,.textarea{
       width:100%;
       border-radius: 14px;
-      border:1px solid var(--line);
-      background:#fff;
+      border:1px solid var(--border);
+      background: #fff;
       padding:10px 12px;
       font-size:13px;
       color:var(--ink);
       outline:none;
-      transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
+      transition:border-color .15s ease, box-shadow .15s ease, transform .05s ease, background .15s ease;
     }
     .input:focus,.select:focus,.textarea:focus{
-      border-color: rgba(239,68,68,.65);
-      box-shadow: 0 0 0 4px rgba(239,68,68,.12);
+      border-color: rgba(239,68,68,0.45);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
       transform: translateY(-1px);
     }
-    .textarea{min-height:90px; resize:vertical}
+    .textarea{min-height:96px; resize:vertical}
 
-    .row{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-    }
+    .row{display:grid; grid-template-columns: 1fr; gap:10px}
     @media(min-width:560px){ .row.two{grid-template-columns: 1fr 1fr} }
-    @media(min-width:860px){ .row.three{grid-template-columns: 1fr 1fr 1fr} }
+    @media(min-width:560px){ .row.three{grid-template-columns: 1fr 1fr 1fr} }
 
     /* Table */
-    .table-shell{
-      overflow:hidden;
-      border-radius: var(--radius2);
-      border:1px solid var(--line);
-      background:#fff;
-      box-shadow: var(--shadow);
-    }
+    .table-shell{overflow:hidden; border-radius:18px; border:1px solid var(--border); background:#fff; box-shadow: var(--shadow2)}
     .table-head{
       display:flex; justify-content:space-between; align-items:center; gap:10px;
-      padding:12px 14px;
-      border-bottom:1px solid var(--line2);
-      background: linear-gradient(180deg, rgba(239,68,68,.08), rgba(255,255,255,1));
+      padding:10px 12px; border-bottom:1px solid var(--border);
+      background: linear-gradient(to right, rgba(239,68,68,0.06), rgba(15,23,42,0.02));
     }
-    .table-title{font-size:13px; font-weight:850}
+    .table-title{font-size:13px; font-weight:900}
     .table-meta{font-size:11px; color:var(--muted)}
     .scroll{max-height:560px; overflow:auto}
     table{width:100%; border-collapse:collapse; font-size:12px}
-    thead{position:sticky; top:0; background:#fff; z-index:1}
-    th,td{padding:10px 12px; text-align:left; border-bottom:1px solid var(--line2)}
-    th{
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      color:var(--muted2);
-      background:#fff;
-    }
+    thead{position:sticky; top:0; background: #fff; z-index:1}
+    th,td{padding:10px 10px; text-align:left; border-bottom:1px solid rgba(15,23,42,0.06)}
+    th{font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted)}
     tbody tr{transition: background .12s ease}
-    tbody tr:hover{background: rgba(239,68,68,.06)}
+    tbody tr:hover{background: rgba(239,68,68,0.04)}
     .mono{font-family:var(--mono); font-size:11px}
 
     .status{
-      display:inline-flex; align-items:center; gap:6px;
-      padding:4px 10px; border-radius:999px;
-      font-size:10px; letter-spacing:.08em; text-transform:uppercase;
-      border:1px solid transparent;
-      font-weight:800;
+      display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px;
+      font-size:10px; letter-spacing:.08em; text-transform:uppercase; border:1px solid transparent;
+      font-weight:900;
     }
-    .available{background: rgba(22,163,74,.10); color:#166534; border-color: rgba(22,163,74,.26)}
-    .pending{background: rgba(245,158,11,.12); color:#92400e; border-color: rgba(245,158,11,.28)}
-    .sold{background: rgba(239,68,68,.12); color:#7f1d1d; border-color: rgba(239,68,68,.25)}
-    .published{background: rgba(59,130,246,.10); color:#1e3a8a; border-color: rgba(59,130,246,.25)}
-
-    .chip{
-      display:inline-flex; align-items:center;
-      border-radius:999px;
-      padding:4px 8px;
-      border:1px solid var(--line);
-      color:var(--muted);
-      background:#fff;
-      font-size:11px;
-    }
+    .available{background: rgba(22,163,74,0.12); color:#14532d; border-color: rgba(22,163,74,0.25)}
+    .pending{background: rgba(245,158,11,0.12); color:#7c2d12; border-color: rgba(245,158,11,0.25)}
+    .sold{background: rgba(239,68,68,0.10); color:#7f1d1d; border-color: rgba(239,68,68,0.22)}
+    .draft{background: rgba(100,116,139,0.12); color:#0f172a; border-color: rgba(100,116,139,0.25)}
 
     /* Modal */
     .backdrop{
       position:fixed; inset:0; z-index:50;
-      background: rgba(2,6,23,.50);
+      background: rgba(15,23,42,0.55);
       backdrop-filter: blur(10px);
-      display:none;
-      align-items:center;
-      justify-content:center;
+      display:none; align-items:center; justify-content:center;
       padding:16px;
     }
     .backdrop.show{display:flex}
     .modal{
-      width:100%;
-      max-width:900px;
+      width:100%; max-width:880px;
       background:#fff;
-      border-radius: 26px;
-      border:1px solid rgba(255,255,255,.45);
-      box-shadow: 0 36px 90px rgba(2,6,23,.35);
+      border-radius: 24px;
+      border:1px solid var(--border);
+      box-shadow: 0 30px 70px rgba(15,23,42,0.25);
       overflow:hidden;
     }
     .mhead{
+      padding:14px 16px 10px;
       display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
-      padding:14px 16px;
-      border-bottom:1px solid var(--line2);
-      background: linear-gradient(180deg, rgba обучения: rgba(239,68,68,.10), #fff);
+      border-bottom:1px solid var(--border);
+      background: linear-gradient(to right, rgba(239,68,68,0.06), rgba(15,23,42,0.02));
     }
-    .mhead h3{margin:0; font-size:14px; font-weight:900}
-    .msub{font-size:12px; color:var(--muted); margin-top:4px}
+    .mhead h3{margin:0; font-size:14px; font-weight:950}
     .xbtn{
-      border:none;
-      background: rgba(2,6,23,.04);
-      color: var(--muted);
-      width:36px;height:36px;
+      border:none; background:transparent; color:var(--muted);
+      font-size:20px; cursor:pointer;
+      width:36px;height:36px; display:inline-flex; align-items:center; justify-content:center;
       border-radius:999px;
-      cursor:pointer;
-      font-size:20px;
-      display:inline-flex; align-items:center; justify-content:center;
     }
-    .xbtn:hover{background: rgba(239,68,68,.10); color:#7f1d1d}
-    .mbody{padding:14px 16px}
+    .xbtn:hover{background: rgba(239,68,68,0.08); color:#7f1d1d}
+    .mbody{padding:14px 16px 16px}
+    .statusline{min-height:18px; font-size:12px; color:var(--muted); margin-top:8px}
+    .statusline.error{color:var(--bad); font-weight:750}
 
-    .uploadBox{
+    .divider{height:1px; background: rgba(15,23,42,0.08); margin:12px 0}
+
+    .photoGrid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
       margin-top:10px;
-      border:1px dashed rgba(239,68,68,.35);
-      background: rgba(239,68,68,.05);
-      border-radius: 18px;
-      padding:12px;
     }
-    .uploadRow{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .preview{
-      display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;
-    }
+    @media(max-width:700px){ .photoGrid{grid-template-columns: repeat(2, 1fr);} }
     .thumb{
-      width:72px; height:54px;
-      border-radius:12px;
-      border:1px solid var(--line);
+      border:1px solid rgba(15,23,42,0.10);
+      border-radius:14px;
       overflow:hidden;
-      background:#fff;
-      box-shadow: var(--shadow2);
-      display:flex; align-items:center; justify-content:center;
-      font-size:10px; color:var(--muted);
+      background: rgba(15,23,42,0.02);
+      position:relative;
+      min-height:90px;
     }
     .thumb img{width:100%; height:100%; object-fit:cover; display:block}
-
-    .statusline{min-height:18px; font-size:12px; color:var(--muted); margin-top:10px}
-    .statusline.error{color: #b91c1c}
+    .thumb .rm{
+      position:absolute; top:8px; right:8px;
+      border:none; cursor:pointer;
+      background: rgba(255,255,255,0.85);
+      border:1px solid rgba(15,23,42,0.10);
+      width:28px; height:28px; border-radius:999px;
+      font-weight:900; color:#7f1d1d;
+    }
+    .thumb .rm:hover{background:#fff; border-color: rgba(239,68,68,0.25)}
 
     /* Toast */
     #toast{
       position:fixed; bottom:16px; right:16px; z-index:60;
       padding:10px 14px; border-radius:999px; font-size:12px;
       display:none; align-items:center; gap:8px;
-      background:#fff;
-      border:1px solid var(--line);
+      background: #fff;
+      border:1px solid rgba(239,68,68,0.25);
       color: var(--muted);
-      box-shadow: var(--shadow);
+      box-shadow: 0 16px 30px rgba(15,23,42,0.14);
     }
     #toast.show{display:flex}
-    #toast.success{border-color: rgba(22,163,74,.30); color:#166534}
-    #toast.error{border-color: rgba(239,68,68,.30); color:#7f1d1d}
-    #toastDot{width:9px;height:9px;border-radius:999px;background:var(--red)}
+    #toast.success{border-color: rgba(22,163,74,0.30); color:#14532d}
+    #toast.error{border-color: rgba(239,68,68,0.35); color:#7f1d1d}
+    #toastDot{width:8px;height:8px;border-radius:999px;background:var(--accent)}
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="shell">
-
-      <!-- LOGIN VIEW -->
-      <header class="topbar" id="loginTop">
+    <!-- LOGIN -->
+    <div class="card" id="loginView">
+      <div class="top">
         <div class="brand">
           <div class="badge">D</div>
           <div>
-            <h1>Dealer Portal</h1>
-            <div class="sub">Manage inventory, photos, and availability — fast and clean.</div>
+            <div class="title">Dealer Portal</div>
+            <div class="sub">Sign in to manage inventory and upload photos.</div>
           </div>
         </div>
-        <div class="right">
-          <a class="btn btn-ghost" href="/" title="Back to Storefront">Storefront</a>
-        </div>
-      </header>
 
-      <section class="panel" id="loginView">
+        <div class="actions">
+          <a class="btn btn-ghost" href="/"><span>Storefront</span><span>←</span></a>
+          <a class="btn btn-ghost" href="/admin"><span>Admin</span><span>↗</span></a>
+        </div>
+      </div>
+
+      <div class="panel">
         <h3>Sign in</h3>
-        <div class="hint">Use the <b>Dealer ID</b> and the <b>6-digit passcode</b> generated from Admin.</div>
+        <div class="hint">Use your <b>Dealer ID</b> and the 6-digit passcode generated in Admin.</div>
 
         <div class="row two" style="margin-top:10px">
           <div class="field">
             <div class="label"><span>Dealer ID</span><span>Required</span></div>
-            <input id="dealerId" class="input" placeholder="dealerslug (e.g. dealerpytch)" autocomplete="username" />
+            <input id="dealerId" class="input" placeholder="DEALER-0001" autocomplete="username" />
           </div>
           <div class="field">
             <div class="label"><span>Passcode</span><span>Required</span></div>
@@ -341,45 +295,44 @@
         </div>
 
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px">
-          <button class="btn btn-ghost" id="btnDemo" type="button">Demo mode</button>
-          <button class="btn btn-primary" id="btnLogin" type="button">Sign in</button>
+          <button class="btn btn-ghost" id="btnDemo" type="button"><span>Demo mode</span><span>★</span></button>
+          <button class="btn btn-primary" id="btnLogin" type="button"><span>Sign in</span><span>→</span></button>
         </div>
 
         <div class="statusline" id="loginStatus"></div>
-      </section>
+      </div>
+    </div>
 
-      <!-- DASH VIEW -->
-      <header class="topbar hidden" id="dashTop">
+    <!-- DASH -->
+    <div class="card hidden" id="dashView">
+      <div class="top">
         <div class="brand">
           <div class="badge">D</div>
           <div>
-            <h1 id="dealerTitle">Dealer</h1>
+            <div class="title" id="dealerTitle">Dealer</div>
             <div class="sub" id="dealerSub">Inventory manager</div>
           </div>
         </div>
 
-        <div class="right">
-          <div class="pill" title="API connection status">
+        <div class="actions">
+          <div class="pill">
             <span class="dot" id="apiDot"></span>
             <span id="apiStatus">Connecting…</span>
           </div>
-          <button class="btn btn-ghost" id="btnRefresh" type="button">Refresh</button>
-          <button class="btn btn-primary" id="btnAdd" type="button">Add vehicle</button>
-          <a class="btn btn-ghost" href="/" title="Open Storefront">Storefront</a>
-          <button class="btn btn-ghost" id="btnLogout" type="button">Logout</button>
+          <button class="btn btn-ghost" id="btnRefresh" type="button"><span>Refresh</span><span>⟳</span></button>
+          <button class="btn btn-primary" id="btnAdd" type="button"><span>Add vehicle</span><span>＋</span></button>
+          <a class="btn btn-ghost" href="/"><span>Storefront</span><span>↗</span></a>
+          <button class="btn btn-ghost" id="btnLogout" type="button"><span>Logout</span><span>⎋</span></button>
         </div>
-      </header>
+      </div>
 
-      <section class="grid hidden" id="dashView">
+      <div class="grid">
         <div class="panel">
-          <h3>Quick actions</h3>
-          <div class="hint">
-            Tip: set status to <b>Published</b> when a vehicle is ready for customers.
-            <br/>Keep entries clean — dropdowns help reduce mistakes.
-          </div>
+          <h3>Controls</h3>
+          <div class="hint">Search + filter your inventory. Click a row to edit.</div>
 
           <div class="field">
-            <div class="label"><span>Search inventory</span><span>Vehicle / Make / Model / Notes</span></div>
+            <div class="label"><span>Search</span><span>Vehicle ID / Make / Model / Notes</span></div>
             <input id="q" class="input" placeholder="Search…" />
           </div>
 
@@ -388,10 +341,10 @@
               <div class="label"><span>Status</span><span>Filter</span></div>
               <select id="filterStatus" class="select">
                 <option value="">All</option>
-                <option value="published">Published</option>
                 <option value="available">Available</option>
                 <option value="pending">Pending</option>
                 <option value="sold">Sold</option>
+                <option value="draft">Draft</option>
               </select>
             </div>
             <div class="field">
@@ -408,12 +361,10 @@
 
           <div class="statusline" id="dashStatus"></div>
 
-          <div class="field" style="margin-top:12px">
-            <div class="label"><span>What gets shown publicly?</span><span>Storefront rule</span></div>
-            <div class="hint">
-              Storefront shows vehicles marked <b>Published</b> (and also “Available” if enabled).
-              <br/>If you don’t see vehicles on the storefront, confirm the status and refresh.
-            </div>
+          <div class="divider"></div>
+          <div class="hint">
+            Uploads use <b>signed URLs</b> (fast, reliable). Photos land in your bucket in:
+            <span class="mono">dealers/{dealerId}/vehicles/{vehicleId}/images/original/</span>
           </div>
         </div>
 
@@ -431,28 +382,27 @@
               <thead>
                 <tr>
                   <th>Vehicle</th>
-                  <th>Specs</th>
                   <th>Status</th>
                   <th>Price</th>
                   <th>Photos</th>
+                  <th>Updated</th>
                 </tr>
               </thead>
               <tbody id="tbody"></tbody>
             </table>
           </div>
         </div>
-      </section>
-
+      </div>
     </div>
   </div>
 
-  <!-- ADD/EDIT MODAL -->
+  <!-- MODAL -->
   <div class="backdrop" id="backdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-label="Vehicle editor">
       <div class="mhead">
         <div>
           <h3 id="mTitle">Add vehicle</h3>
-          <div class="msub" id="mSub">Create a listing, then upload photos (fast).</div>
+          <div class="sub" id="mSub">Save details, then upload photos.</div>
         </div>
         <button class="xbtn" id="mClose" type="button" aria-label="Close">×</button>
       </div>
@@ -464,12 +414,12 @@
             <input id="vId" class="input" placeholder="VEH-123ABC" />
           </div>
           <div class="field">
-            <div class="label"><span>Status</span><span>Controls visibility</span></div>
+            <div class="label"><span>Status</span><span>Required</span></div>
             <select id="vStatus" class="select">
-              <option value="published">Published (shows on storefront)</option>
               <option value="available">Available</option>
               <option value="pending">Pending</option>
               <option value="sold">Sold</option>
+              <option value="draft">Draft</option>
             </select>
           </div>
         </div>
@@ -477,12 +427,12 @@
         <div class="row two">
           <div class="field">
             <div class="label"><span>Make</span><span>Required</span></div>
-            <input id="vMake" class="input" placeholder="Toyota" list="makeList" />
-            <datalist id="makeList">
+            <input id="vMake" class="input" placeholder="Toyota" list="makes" />
+            <datalist id="makes">
               <option>Toyota</option><option>Honda</option><option>Nissan</option><option>Mazda</option>
               <option>Suzuki</option><option>Mitsubishi</option><option>Subaru</option><option>BMW</option>
-              <option>Mercedes-Benz</option><option>Audi</option><option>Kia</option><option>Hyundai</option>
-              <option>Volkswagen</option><option>Ford</option><option>Chevrolet</option>
+              <option>Mercedes-Benz</option><option>Audi</option><option>Volkswagen</option><option>Kia</option>
+              <option>Hyundai</option><option>Ford</option><option>Chevrolet</option>
             </datalist>
           </div>
           <div class="field">
@@ -494,11 +444,11 @@
         <div class="row three">
           <div class="field">
             <div class="label"><span>Year</span><span>Optional</span></div>
-            <input id="vYear" class="input" type="number" min="1980" max="2100" placeholder="2018" />
+            <input id="vYear" class="input" type="number" placeholder="2018" />
           </div>
           <div class="field">
             <div class="label"><span>Price (JMD)</span><span>Optional</span></div>
-            <input id="vPrice" class="input" type="number" min="0" step="1000" placeholder="1250000" />
+            <input id="vPrice" class="input" type="number" placeholder="1250000" />
           </div>
           <div class="field">
             <div class="label"><span>Title</span><span>Optional</span></div>
@@ -512,8 +462,8 @@
             <select id="vTrans" class="select">
               <option value="">—</option>
               <option>Automatic</option>
-              <option>Manual</option>
               <option>CVT</option>
+              <option>Manual</option>
               <option>DCT</option>
             </select>
           </div>
@@ -535,9 +485,9 @@
               <option>Hatchback</option>
               <option>SUV</option>
               <option>Wagon</option>
-              <option>Pickup</option>
-              <option>Van</option>
               <option>Coupe</option>
+              <option>Van</option>
+              <option>Pickup</option>
             </select>
           </div>
         </div>
@@ -547,49 +497,51 @@
             <div class="label"><span>Color</span><span>Optional</span></div>
             <select id="vColor" class="select">
               <option value="">—</option>
-              <option>White</option><option>Black</option><option>Silver</option><option>Grey</option>
+              <option>White</option><option>Black</option><option>Silver</option><option>Gray</option>
               <option>Blue</option><option>Red</option><option>Green</option><option>Brown</option>
-              <option>Beige</option><option>Other</option>
+              <option>Beige</option><option>Gold</option>
             </select>
           </div>
           <div class="field">
             <div class="label"><span>Location</span><span>Optional</span></div>
             <select id="vLoc" class="select">
               <option value="">—</option>
-              <option>Kingston</option><option>St. Andrew</option><option>St. Catherine</option>
-              <option>Montego Bay</option><option>St. James</option><option>Ocho Rios</option>
-              <option>Portmore</option><option>May Pen</option><option>Mandeville</option>
-              <option>Other</option>
+              <option>Kingston</option><option>St. Andrew</option><option>St. Catherine</option><option>St. James</option>
+              <option>Manchester</option><option>Clarendon</option><option>Portland</option><option>St. Ann</option>
+              <option>Hanover</option><option>Westmoreland</option><option>St. Thomas</option><option>Trelawny</option>
             </select>
           </div>
         </div>
 
         <div class="field">
           <div class="label"><span>Notes</span><span>Shown to customers</span></div>
-          <textarea id="vNotes" class="textarea" placeholder="Example: clean unit, trade-in welcome, financing available, contact for video walk-through."></textarea>
+          <textarea id="vNotes" class="textarea" placeholder="Condition, financing, trade-ins, etc."></textarea>
         </div>
 
-        <div class="uploadBox">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap">
-            <div>
-              <div style="font-weight:900; font-size:13px">Photos</div>
-              <div class="hint">Select images — we upload using signed URLs (fast, reliable).</div>
+        <div class="panel" style="margin-top:10px">
+          <h3>Photos</h3>
+          <div class="hint">Select images — we upload using signed URLs (fast, reliable).</div>
+
+          <div class="row two" style="margin-top:10px">
+            <div class="field" style="margin-top:0">
+              <div class="label"><span>Choose files</span><span>Images</span></div>
+              <input id="files" class="input" type="file" multiple accept="image/*" />
             </div>
-            <div class="chip" id="uploadState">Not uploaded</div>
+            <div class="field" style="margin-top:0">
+              <div class="label"><span>Hero photo</span><span>Optional</span></div>
+              <select id="heroPick" class="select">
+                <option value="">Auto (first photo)</option>
+              </select>
+            </div>
           </div>
 
-          <div class="field">
-            <div class="label"><span>Choose files</span><span>Images</span></div>
-            <input id="files" class="input" type="file" multiple accept="image/*" />
-          </div>
-
-          <div class="preview" id="preview"></div>
-          <div class="hint" id="uploadHint" style="margin-top:8px">After saving, we’ll upload photos automatically.</div>
+          <div class="photoGrid" id="photoGrid"></div>
+          <div class="statusline" id="uploadLine"></div>
         </div>
 
         <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:12px">
-          <button class="btn btn-ghost" id="btnCancel" type="button">Cancel</button>
-          <button class="btn btn-primary" id="btnSave" type="button">Save vehicle</button>
+          <button class="btn btn-ghost" id="btnCancel" type="button"><span>Cancel</span><span>×</span></button>
+          <button class="btn btn-primary" id="btnSave" type="button"><span>Save</span><span>✔</span></button>
         </div>
 
         <div class="statusline" id="mStatusLine"></div>
@@ -604,32 +556,18 @@
   </div>
 
   <script>
-    /**
-     * NEW BACKEND (your server.js)
-     * POST /api/dealer/login             { dealerId, passcode } -> { ok:true, token, dealerName, dealerId }
-     * GET  /api/dealer/vehicles          (auth) -> { ok:true, vehicles:[...] }
-     * POST /api/dealer/vehicles          (auth) -> { ok:true, vehicle }
-     * POST /api/dealer/uploads/sign      (auth) -> { ok:true, url, publicUrl, objectKey }
-     *
-     * Upload flow:
-     * 1) save vehicle row (creates vehicleId if empty)
-     * 2) for each file: sign -> PUT to signed URL -> collect publicUrl
-     * 3) update vehicle row again with images + heroImage
-     */
-
+    // ---- API ----
     const API = {
       login: () => "/api/dealer/login",
       vehicles: () => "/api/dealer/vehicles",
-      createVehicle: () => "/api/dealer/vehicles",
-      signUpload: () => "/api/dealer/uploads/sign",
+      upsertVehicle: () => "/api/dealer/vehicles",
+      uploadSign: () => "/api/dealer/uploads/sign",
     };
 
     const el = (id) => document.getElementById(id);
 
     const ui = {
       // views
-      loginTop: el("loginTop"),
-      dashTop: el("dashTop"),
       loginView: el("loginView"),
       dashView: el("dashView"),
 
@@ -640,7 +578,7 @@
       btnDemo: el("btnDemo"),
       loginStatus: el("loginStatus"),
 
-      // header
+      // dash
       dealerTitle: el("dealerTitle"),
       dealerSub: el("dealerSub"),
       apiDot: el("apiDot"),
@@ -648,15 +586,13 @@
       btnRefresh: el("btnRefresh"),
       btnAdd: el("btnAdd"),
       btnLogout: el("btnLogout"),
-
-      // filters
       q: el("q"),
       filterStatus: el("filterStatus"),
       sort: el("sort"),
       dashStatus: el("dashStatus"),
-      lastUpdated: el("lastUpdated"),
-      count: el("count"),
       tbody: el("tbody"),
+      count: el("count"),
+      lastUpdated: el("lastUpdated"),
 
       // modal
       backdrop: el("backdrop"),
@@ -667,6 +603,7 @@
       mSub: el("mSub"),
       mStatusLine: el("mStatusLine"),
 
+      // fields
       vId: el("vId"),
       vStatus: el("vStatus"),
       vMake: el("vMake"),
@@ -681,10 +618,11 @@
       vLoc: el("vLoc"),
       vNotes: el("vNotes"),
 
+      // photos
       files: el("files"),
-      preview: el("preview"),
-      uploadHint: el("uploadHint"),
-      uploadState: el("uploadState"),
+      heroPick: el("heroPick"),
+      photoGrid: el("photoGrid"),
+      uploadLine: el("uploadLine"),
 
       // toast
       toast: el("toast"),
@@ -698,12 +636,23 @@
       dealerName: null,
       apiOnline: false,
       vehicles: [],
-      editing: null
+      editing: null, // current vehicle record
+      editingImages: [], // array of URLs (public)
     };
 
+    // ---- boot ----
     document.addEventListener("DOMContentLoaded", () => {
       wire();
-      ui.dealerId.focus();
+      // attempt session restore
+      const saved = loadSession();
+      if (saved?.token && saved?.dealerId) {
+        state.token = saved.token;
+        state.dealerId = saved.dealerId;
+        state.dealerName = saved.dealerName || saved.dealerId;
+        state.apiOnline = true;
+        setApi("Live", "on");
+        enterDashboard();
+      }
     });
 
     function wire(){
@@ -713,7 +662,7 @@
 
       ui.btnLogout.addEventListener("click", logout);
       ui.btnRefresh.addEventListener("click", loadVehicles);
-      ui.btnAdd.addEventListener("click", () => openModal());
+      ui.btnAdd.addEventListener("click", () => openModal(null));
 
       ui.q.addEventListener("keydown", (e) => { if(e.key === "Enter") render(); });
       ui.filterStatus.addEventListener("change", render);
@@ -723,16 +672,24 @@
       ui.btnCancel.addEventListener("click", closeModal);
       ui.backdrop.addEventListener("click", (e) => { if(e.target === ui.backdrop) closeModal(); });
 
-      ui.btnSave.addEventListener("click", saveVehicle);
+      ui.btnSave.addEventListener("click", saveVehicleFlow);
 
-      ui.files.addEventListener("change", renderPreview);
+      ui.files.addEventListener("change", () => {
+        if (!state.apiOnline) {
+          setUploadLine("Demo mode: uploads disabled.", true);
+          return;
+        }
+        const n = ui.files.files ? ui.files.files.length : 0;
+        setUploadLine(n ? `${n} file(s) selected.` : "", false);
+      });
     }
 
+    // ---- auth ----
     async function doLogin(){
       const dealerId = (ui.dealerId.value || "").trim();
       const passcode = (ui.passcode.value || "").trim();
       if(!dealerId || !passcode){
-        setLoginStatus("Enter Dealer ID and passcode.", true);
+        setLoginStatus("Enter Dealer ID + passcode.", true);
         return;
       }
       setLoginStatus("Signing in…", false);
@@ -745,19 +702,19 @@
         });
 
         const data = await safeJson(res);
-        if(!res.ok || !data || data.ok !== true){
-          throw new Error(data?.error || "Login failed");
-        }
+        if(!res.ok || !data?.ok) throw new Error(data?.error || "Login failed");
 
         state.apiOnline = true;
         state.token = data.token;
         state.dealerId = data.dealerId || dealerId;
         state.dealerName = data.dealerName || dealerId;
 
+        saveSession();
         setApi("Live", "on");
         enterDashboard();
+        toast("Signed in.", "success");
       }catch(e){
-        setLoginStatus(e?.message || "Login failed. Check credentials.", true);
+        setLoginStatus(String(e?.message || "Login failed"), true);
         setApi("Error", "err");
       }
     }
@@ -765,48 +722,44 @@
     function enterDemo(){
       state.apiOnline = false;
       state.token = "demo-token";
-      state.dealerId = "DEALER-DEMO";
+      state.dealerId = "DEALER-0001";
       state.dealerName = "Demo Dealer";
       state.vehicles = demoVehicles();
-      setApi("Demo", "off");
+      setApi("Demo", "warn");
       enterDashboard();
       render();
-      toast("Demo mode loaded.", "success");
+      toast("Demo mode enabled.", "success");
     }
 
     function enterDashboard(){
-      ui.loginTop.classList.add("hidden");
       ui.loginView.classList.add("hidden");
-
-      ui.dashTop.classList.remove("hidden");
       ui.dashView.classList.remove("hidden");
-
       ui.dealerTitle.textContent = state.dealerName || "Dealer";
       ui.dealerSub.textContent = `${state.dealerId || ""} · inventory manager`;
       loadVehicles();
     }
 
     function logout(){
+      clearSession();
       state.token = null;
       state.dealerId = null;
       state.dealerName = null;
       state.vehicles = [];
       state.apiOnline = false;
 
-      ui.dashTop.classList.add("hidden");
       ui.dashView.classList.add("hidden");
-
-      ui.loginTop.classList.remove("hidden");
       ui.loginView.classList.remove("hidden");
       ui.loginStatus.textContent = "";
-      setApi("—", "off");
+      setApi("—", "warn");
       toast("Logged out.", "success");
     }
 
+    // ---- data ----
     async function loadVehicles(){
-      ui.dashStatus.textContent = "Loading vehicles…";
+      ui.dashStatus.textContent = state.apiOnline ? "Loading vehicles…" : "Demo inventory loaded.";
+      ui.lastUpdated.textContent = "—";
+
       if(!state.apiOnline){
-        ui.dashStatus.textContent = "Demo inventory loaded.";
         ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
         render();
         return;
@@ -821,12 +774,15 @@
         });
 
         const data = await safeJson(res);
-        if(!res.ok || !data || data.ok !== true || !Array.isArray(data.vehicles)){
-          throw new Error(data?.error || "Failed to load vehicles");
+        if(res.status === 401){
+          // token expired/invalid
+          toast("Session expired. Please sign in again.", "error");
+          logout();
+          return;
         }
+        if(!res.ok || !data?.ok || !Array.isArray(data.vehicles)) throw new Error(data?.error || "Bad response");
 
         state.vehicles = normalize(data.vehicles);
-
         ui.dashStatus.textContent = "Ready.";
         ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
         setApi("Live", "on");
@@ -834,7 +790,7 @@
       }catch(e){
         ui.dashStatus.textContent = "Could not load vehicles.";
         setApi("Error", "err");
-        toast(e?.message || "Failed to load inventory.", "error");
+        toast(String(e?.message || "Failed to load inventory."), "error");
       }
     }
 
@@ -846,14 +802,14 @@
       let list = [...state.vehicles];
 
       if(q) list = list.filter(v => blob(v).includes(q));
-      if(fs) list = list.filter(v => (String(v.status||"").toLowerCase() === fs));
+      if(fs) list = list.filter(v => (String(v.status || "draft").toLowerCase() === fs));
 
       list.sort((a,b)=>{
         if(sort==="priceAsc") return (a.price||0)-(b.price||0);
         if(sort==="priceDesc") return (b.price||0)-(a.price||0);
         if(sort==="yearAsc") return (a.year||0)-(b.year||0);
         if(sort==="yearDesc") return (b.year||0)-(a.year||0);
-        return new Date(b.updatedAt||b.createdAt||0).getTime() - new Date(a.updatedAt||a.createdAt||0).getTime();
+        return new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime();
       });
 
       ui.tbody.innerHTML = "";
@@ -876,45 +832,43 @@
         tr.style.cursor = "pointer";
         tr.addEventListener("click", () => openModal(v));
 
-        const title = esc(v.title || `${v.year||""} ${v.make||""} ${v.model||""}`.trim() || "Vehicle");
-        const spec1 = `${esc(v.year ? String(v.year) : "—")} · ${esc(v.bodyType||"—")}`;
-        const spec2 = `${esc(v.transmission||"—")} · ${esc(v.fuel||"—")}`;
+        tr.appendChild(tdHtml(`
+          <div class="mono">${esc(v.vehicleId)}</div>
+          <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(v.make)} ${esc(v.model)}${v.year ? " · " + esc(String(v.year)) : ""}</div>
+        `));
 
-        const td1 = document.createElement("td");
-        td1.innerHTML = `<div style="font-weight:900">${title}</div>
-                         <div class="mono" style="color:var(--muted);margin-top:3px">${esc(v.vehicleId)}</div>`;
+        tr.appendChild(tdHtml(statusPill(v.status)));
 
-        const td2 = document.createElement("td");
-        td2.innerHTML = `<div>${spec1}</div>
-                         <div style="color:var(--muted);font-size:11px;margin-top:2px">${spec2}</div>`;
+        tr.appendChild(tdHtml(`<div style="font-weight:950">${money(v.price)}</div>`));
 
-        const td3 = document.createElement("td");
-        const s = (v.status||"available").toLowerCase();
-        td3.innerHTML = `<span class="status ${esc(s)}">${esc(s)}</span>`;
+        const imgCount = (v.images || []).length;
+        tr.appendChild(tdHtml(`<span class="mono">${imgCount}</span>`));
 
-        const td4 = document.createElement("td");
-        td4.innerHTML = `<div style="font-weight:900">${money(v.price)}</div>
-                         <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(v.location||"")}</div>`;
+        tr.appendChild(tdHtml(`<span class="mono">${esc(shortTime(v.updatedAt || v.createdAt || ""))}</span>`));
 
-        const td5 = document.createElement("td");
-        const count = (v.images||[]).length;
-        td5.innerHTML = `<span class="chip">${count} photo${count===1?"":"s"}</span>`;
-
-        tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5);
         ui.tbody.appendChild(tr);
       });
     }
 
-    function openModal(v=null){
+    function tdHtml(html){
+      const td = document.createElement("td");
+      td.innerHTML = html;
+      return td;
+    }
+
+    // ---- modal ----
+    function openModal(v){
       state.editing = v ? {...v} : null;
+      state.editingImages = Array.isArray(v?.images) ? [...v.images] : [];
 
       ui.mTitle.textContent = v ? "Edit vehicle" : "Add vehicle";
-      ui.mSub.textContent = v ? "Update details, then upload photos if needed." : "Add details, then upload photos in one save.";
+      ui.mSub.textContent = "Save details, then upload photos.";
       ui.mStatusLine.textContent = "";
       ui.mStatusLine.classList.remove("error");
+      setUploadLine("", false);
 
       ui.vId.value = v?.vehicleId || "";
-      ui.vStatus.value = (v?.status || "published").toLowerCase();
+      ui.vStatus.value = (v?.status || "available").toLowerCase();
       ui.vMake.value = v?.make || "";
       ui.vModel.value = v?.model || "";
       ui.vYear.value = v?.year || "";
@@ -926,11 +880,10 @@
       ui.vColor.value = v?.color || "";
       ui.vLoc.value = v?.location || "";
       ui.vNotes.value = v?.notes || "";
-
       ui.files.value = "";
-      ui.preview.innerHTML = "";
-      ui.uploadHint.textContent = "After saving, we’ll upload photos automatically.";
-      ui.uploadState.textContent = "Not uploaded";
+
+      rebuildHeroPick(v?.heroImage || "");
+      renderThumbs();
 
       ui.backdrop.classList.add("show");
       ui.backdrop.setAttribute("aria-hidden","false");
@@ -940,182 +893,166 @@
       ui.backdrop.classList.remove("show");
       ui.backdrop.setAttribute("aria-hidden","true");
       state.editing = null;
+      state.editingImages = [];
+      ui.files.value = "";
     }
 
-    function renderPreview(){
-      ui.preview.innerHTML = "";
-      const files = ui.files.files ? Array.from(ui.files.files) : [];
-      if(!files.length){
-        ui.uploadState.textContent = "Not uploaded";
+    function rebuildHeroPick(currentHero){
+      ui.heroPick.innerHTML = `<option value="">Auto (first photo)</option>`;
+      for (const url of state.editingImages){
+        const opt = document.createElement("option");
+        opt.value = url;
+        opt.textContent = trimUrl(url);
+        ui.heroPick.appendChild(opt);
+      }
+      if (currentHero && state.editingImages.includes(currentHero)) ui.heroPick.value = currentHero;
+      else ui.heroPick.value = "";
+    }
+
+    function renderThumbs(){
+      ui.photoGrid.innerHTML = "";
+      if (!state.editingImages.length){
+        ui.photoGrid.innerHTML = `<div class="hint" style="grid-column:1/-1">No photos yet. Add photos below.</div>`;
+        rebuildHeroPick("");
         return;
       }
-      ui.uploadState.textContent = `${files.length} selected`;
-      files.slice(0, 12).forEach(f=>{
-        const div = document.createElement("div");
-        div.className = "thumb";
-        const img = document.createElement("img");
-        img.alt = f.name;
-        img.src = URL.createObjectURL(f);
-        div.appendChild(img);
-        ui.preview.appendChild(div);
+      state.editingImages.forEach((url, idx) => {
+        const wrap = document.createElement("div");
+        wrap.className = "thumb";
+        wrap.innerHTML = `
+          <img src="${escAttr(url)}" alt="photo ${idx+1}" />
+          <button class="rm" type="button" title="Remove">×</button>
+        `;
+        wrap.querySelector(".rm").addEventListener("click", (e) => {
+          e.stopPropagation();
+          state.editingImages = state.editingImages.filter(u => u !== url);
+          renderThumbs();
+        });
+        ui.photoGrid.appendChild(wrap);
       });
-      if(files.length > 12){
-        const div = document.createElement("div");
-        div.className = "thumb";
-        div.textContent = `+${files.length-12}`;
-        ui.preview.appendChild(div);
-      }
+      rebuildHeroPick(state.editing?.heroImage || "");
     }
 
-    async function saveVehicle(){
-      const payload = {
-        vehicleId: (ui.vId.value || "").trim() || genVehicleId(),
-        status: (ui.vStatus.value || "published").toLowerCase(),
-        make: (ui.vMake.value || "").trim(),
-        model: (ui.vModel.value || "").trim(),
-        year: toYear(ui.vYear.value),
-        price: toNum(ui.vPrice.value),
-        title: (ui.vTitle.value || "").trim(),
-        transmission: (ui.vTrans.value || "").trim(),
-        fuel: (ui.vFuel.value || "").trim(),
-        bodyType: (ui.vBody.value || "").trim(),
-        color: (ui.vColor.value || "").trim(),
-        location: (ui.vLoc.value || "").trim(),
-        notes: (ui.vNotes.value || "").trim(),
-      };
-
-      if(!payload.make || !payload.model){
-        setMStatus("Make and Model are required.", true);
+    // ---- save + upload flow ----
+    async function saveVehicleFlow(){
+      if(!state.apiOnline){
+        setMStatus("Demo mode: saving disabled.", true);
+        return;
+      }
+      if(!state.token){
+        setMStatus("Not signed in.", true);
         return;
       }
 
-      setMStatus("Saving vehicle…", false);
       ui.btnSave.disabled = true;
+      setMStatus("Saving…", false);
 
       try{
-        let saved = payload;
+        // 1) upsert vehicle first (ensures vehicleId exists)
+        const vehicleId = (ui.vId.value || "").trim() || genVehicleId();
 
-        if(state.apiOnline){
-          // Save vehicle row first
-          const res = await fetch(API.createVehicle(), {
-            method:"POST",
-            headers:{
-              "Content-Type":"application/json",
-              "Accept":"application/json",
-              "Authorization":"Bearer " + state.token
-            },
-            body: JSON.stringify(payload)
-          });
+        const basePayload = {
+          vehicleId,
+          status: (ui.vStatus.value || "available").toLowerCase(),
+          make: (ui.vMake.value || "").trim(),
+          model: (ui.vModel.value || "").trim(),
+          year: numOrNull(ui.vYear.value),
+          price: num(ui.vPrice.value),
+          title: (ui.vTitle.value || "").trim(),
+          notes: (ui.vNotes.value || "").trim(),
 
-          const data = await safeJson(res);
-          if(!res.ok || !data || data.ok !== true){
-            throw new Error(data?.error || "Save failed");
-          }
+          // these fields are fine for UI but server ignores unknown ones — keeping for future expansion
+          transmission: (ui.vTrans.value || "").trim(),
+          fuel: (ui.vFuel.value || "").trim(),
+          bodyType: (ui.vBody.value || "").trim(),
+          color: (ui.vColor.value || "").trim(),
+          location: (ui.vLoc.value || "").trim(),
 
-          saved = normalize([data.vehicle || payload])[0];
-        } else {
-          // demo mode local
-          const idx = state.vehicles.findIndex(x => x.vehicleId === payload.vehicleId);
-          const merged = {
-            ...(idx>-1?state.vehicles[idx]:{}),
-            ...payload,
-            images:(idx>-1?state.vehicles[idx].images:[])||[],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          if(idx>-1) state.vehicles[idx] = merged; else state.vehicles.unshift(merged);
-          saved = merged;
+          // IMPORTANT: send images/heroImage that we already have
+          images: [...state.editingImages],
+          heroImage: (ui.heroPick.value || "").trim(),
+        };
+
+        if(!basePayload.make || !basePayload.model){
+          throw new Error("Make + Model are required.");
         }
 
-        // Upload selected files (SIGNED URL FLOW)
+        const firstSave = await apiJson(API.upsertVehicle(), basePayload);
+        const savedVehicle = firstSave?.vehicle || basePayload;
+
+        // 2) upload files (if any)
         const files = ui.files.files ? Array.from(ui.files.files) : [];
-        if (files.length && state.apiOnline){
-          setMStatus("Uploading photos…", false);
-          ui.uploadHint.textContent = "Uploading… keep this tab open.";
+        if(files.length){
+          setUploadLine("Uploading photos…", false);
+          const uploadedUrls = await uploadImagesSigned(savedVehicle.vehicleId, files);
+          // merge + de-dupe
+          const merged = dedupe([...state.editingImages, ...uploadedUrls]);
 
-          const uploadedUrls = [];
+          state.editingImages = merged;
+          renderThumbs();
 
-          for (const f of files){
-            // 1) Sign
-            const signRes = await fetch(API.signUpload(), {
-              method:"POST",
-              headers:{
-                "Content-Type":"application/json",
-                "Accept":"application/json",
-                "Authorization":"Bearer " + state.token
-              },
-              body: JSON.stringify({
-                vehicleId: saved.vehicleId,
-                type: "image",
-                filename: f.name,
-                contentType: f.type || "application/octet-stream"
-              })
-            });
+          // 3) update vehicle with images + hero
+          const hero = (ui.heroPick.value || "").trim() || merged[0] || "";
+          setMStatus("Saving photos to vehicle…", false);
 
-            const signData = await safeJson(signRes);
-            if(!signRes.ok || !signData || signData.ok !== true || !signData.url){
-              throw new Error(signData?.error || "Sign upload failed");
-            }
-
-            // 2) PUT to GCS
-            const putRes = await fetch(signData.url, {
-              method:"PUT",
-              headers:{ "Content-Type": f.type || "application/octet-stream" },
-              body: f
-            });
-
-            if(!putRes.ok){
-              const t = await putRes.text().catch(()=> "");
-              throw new Error("Upload failed: " + (t || "PUT error"));
-            }
-
-            uploadedUrls.push(signData.publicUrl);
-          }
-
-          // 3) Update vehicle with images + heroImage
-          const mergedImages = uniq([...(saved.images||[]), ...uploadedUrls]);
-          const hero = saved.heroImage || uploadedUrls[0] || "";
-
-          const updateRes = await fetch(API.createVehicle(), {
-            method:"POST",
-            headers:{
-              "Content-Type":"application/json",
-              "Accept":"application/json",
-              "Authorization":"Bearer " + state.token
-            },
-            body: JSON.stringify({
-              ...saved,
-              images: mergedImages,
-              heroImage: hero
-            })
+          const secondSave = await apiJson(API.upsertVehicle(), {
+            ...basePayload,
+            vehicleId: savedVehicle.vehicleId,
+            images: merged,
+            heroImage: hero,
           });
 
-          const updateData = await safeJson(updateRes);
-          if(!updateRes.ok || !updateData || updateData.ok !== true){
-            throw new Error(updateData?.error || "Final save failed");
-          }
-
-          ui.uploadState.textContent = "Uploaded";
-          ui.uploadHint.textContent = "Uploaded ✔ Photos are now attached to this vehicle.";
+          setUploadLine(`Uploaded ${uploadedUrls.length} photo(s).`, false);
           toast("Vehicle saved + photos uploaded.", "success");
         } else {
-          if(files.length && !state.apiOnline){
-            toast("Demo mode: uploads disabled.", "error");
-          } else {
-            toast("Vehicle saved.", "success");
-          }
+          toast("Vehicle saved.", "success");
         }
 
         await loadVehicles();
         closeModal();
       }catch(e){
-        setMStatus(e?.message || "Save failed.", true);
-        toast(e?.message || "Save failed.", "error");
+        const msg = String(e?.message || "Save failed.");
+        setMStatus(msg, true);
+        toast(msg, "error");
       }finally{
         ui.btnSave.disabled = false;
       }
     }
 
+    async function uploadImagesSigned(vehicleId, files){
+      const out = [];
+      for (let i = 0; i < files.length; i++){
+        const f = files[i];
+        setUploadLine(`Uploading ${i+1}/${files.length}: ${f.name}`, false);
+
+        // 1) request signed url from backend
+        const sign = await apiJson(API.uploadSign(), {
+          vehicleId,
+          type: "image",
+          filename: f.name,
+          contentType: f.type || "application/octet-stream"
+        });
+
+        if (!sign?.url || !sign?.publicUrl) throw new Error("Upload signing failed.");
+
+        // 2) PUT directly to GCS signed url
+        const putRes = await fetch(sign.url, {
+          method: "PUT",
+          headers: { "Content-Type": f.type || "application/octet-stream" },
+          body: f
+        });
+
+        if(!putRes.ok){
+          const t = await putRes.text().catch(()=> "");
+          throw new Error(`Upload failed (${putRes.status}). ${t ? t.slice(0,120) : ""}`.trim());
+        }
+
+        out.push(sign.publicUrl);
+      }
+      return out;
+    }
+
+    // ---- helpers ----
     function setLoginStatus(msg, err){
       ui.loginStatus.textContent = msg || "";
       ui.loginStatus.classList.toggle("error", !!err);
@@ -1124,12 +1061,17 @@
       ui.mStatusLine.textContent = msg || "";
       ui.mStatusLine.classList.toggle("error", !!err);
     }
+    function setUploadLine(msg, err){
+      ui.uploadLine.textContent = msg || "";
+      ui.uploadLine.classList.toggle("error", !!err);
+    }
 
     function setApi(text, mode){
       ui.apiStatus.textContent = text || "—";
       ui.apiDot.classList.remove("on","err");
       if(mode==="on") ui.apiDot.classList.add("on");
       if(mode==="err") ui.apiDot.classList.add("err");
+      if(mode==="warn"){} // default yellow dot
     }
 
     function toast(message, type){
@@ -1137,53 +1079,82 @@
       ui.toast.classList.remove("success","error");
       if(type==="success"){ ui.toast.classList.add("success"); ui.toastDot.style.background="#16a34a"; }
       else if(type==="error"){ ui.toast.classList.add("error"); ui.toastDot.style.background="#ef4444"; }
-      else ui.toastDot.style.background="var(--red)";
+      else ui.toastDot.style.background="var(--accent)";
       ui.toast.classList.add("show");
       clearTimeout(window.__t);
       window.__t = setTimeout(()=>ui.toast.classList.remove("show"), 3200);
+    }
+
+    async function apiJson(url, body){
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json",
+          "Accept":"application/json",
+          "Authorization":"Bearer " + (state.token || "")
+        },
+        body: JSON.stringify(body || {})
+      });
+
+      const data = await safeJson(res);
+      if(res.status === 401){
+        toast("Session expired. Please sign in again.", "error");
+        logout();
+        throw new Error("Unauthorized");
+      }
+      if(!res.ok || !data?.ok){
+        throw new Error(data?.error || `Request failed (${res.status})`);
+      }
+      return data;
+    }
+
+    async function safeJson(res){
+      try { return await res.json(); }
+      catch { return null; }
     }
 
     function normalize(list){
       return (list||[]).map(v => ({
         vehicleId: v.vehicleId || v.id || genVehicleId(),
         dealerId: v.dealerId || state.dealerId || "",
-        title: v.title || "",
         make: v.make || "",
         model: v.model || "",
-        year: toYear(v.year),
-        price: toNum(v.price),
-        currency: v.currency || "JMD",
-        status: (v.status || "available").toLowerCase(),
-        transmission: v.transmission || "",
-        fuel: v.fuel || "",
-        bodyType: v.bodyType || v.type || "",
-        color: v.color || "",
-        location: v.location || "",
+        year: typeof v.year === "number" ? v.year : numOrNull(v.year),
+        price: typeof v.price === "number" ? v.price : num(v.price),
+        status: String(v.status || "draft").toLowerCase(),
+        title: v.title || "",
         notes: v.notes || "",
         heroImage: v.heroImage || "",
         images: Array.isArray(v.images) ? v.images : [],
-        createdAt: v.createdAt || new Date().toISOString(),
-        updatedAt: v.updatedAt || v.createdAt || new Date().toISOString()
+        updatedAt: v.updatedAt || v.createdAt || "",
+        createdAt: v.createdAt || "",
+        transmission: v.transmission || "",
+        fuel: v.fuel || "",
+        bodyType: v.bodyType || "",
+        color: v.color || "",
+        location: v.location || "",
       }));
     }
 
     function demoVehicles(){
+      const twoDays = new Date(Date.now()-86400000*2).toISOString();
+      const sixDays = new Date(Date.now()-86400000*6).toISOString();
+      const oneDay = new Date(Date.now()-86400000*1).toISOString();
       return normalize([
-        { vehicleId:"VEH-10021", make:"Toyota", model:"Vitz", year:2018, price:1250000, status:"published", bodyType:"Hatchback", transmission:"Automatic", fuel:"Gasoline", color:"Silver", location:"Kingston", notes:"Clean unit. Video viewing available.", images:["x","y"], createdAt: new Date(Date.now()-86400000*2).toISOString() },
-        { vehicleId:"VEH-10022", make:"Honda", model:"Civic", year:2017, price:2200000, status:"pending", bodyType:"Sedan", transmission:"Automatic", fuel:"Gasoline", color:"Blue", location:"St. Andrew", notes:"Pending deposit.", images:["x"], createdAt: new Date(Date.now()-86400000*6).toISOString() },
-        { vehicleId:"VEH-10023", make:"BMW", model:"3 Series", year:2016, price:3950000, status:"available", bodyType:"Sedan", transmission:"Automatic", fuel:"Gasoline", color:"Black", location:"Montego Bay", notes:"Premium interior.", images:["x","y","z"], createdAt: new Date(Date.now()-86400000*1).toISOString() },
+        { vehicleId:"VEH-10021", dealerId:"DEALER-0001", make:"Toyota", model:"Vitz", year:2018, price:1250000, status:"available", title:"2018 Toyota Vitz — Clean unit", notes:"Clean unit.", images:[], updatedAt: twoDays },
+        { vehicleId:"VEH-10022", dealerId:"DEALER-0001", make:"Honda", model:"Civic", year:2017, price:2200000, status:"pending", title:"2017 Honda Civic — Pending", notes:"Pending deposit.", images:[], updatedAt: sixDays },
+        { vehicleId:"VEH-10023", dealerId:"DEALER-0001", make:"BMW", model:"3 Series", year:2016, price:3950000, status:"available", title:"2016 BMW 3 Series — Premium", notes:"Premium interior.", images:[], updatedAt: oneDay },
       ]);
     }
 
     function blob(v){
       return [
-        v.vehicleId, v.title, v.make, v.model, v.year, v.bodyType,
-        v.transmission, v.fuel, v.color, v.location, v.notes, v.status
+        v.vehicleId, v.make, v.model, v.year, v.status, v.title, v.notes
       ].filter(Boolean).join(" ").toLowerCase();
     }
 
     function money(n){
-      n = toNum(n);
+      n = num(n);
       if(!n) return "Price on request";
       return "JMD " + n.toLocaleString(undefined,{maximumFractionDigits:0});
     }
@@ -1198,46 +1169,79 @@
       return `${day}/${mon}/${yr} ${hr}:${mi}`;
     }
 
-    function toNum(v){
+    function shortTime(iso){
+      if(!iso) return "—";
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso).slice(0,16);
+      return fmt(d);
+    }
+
+    function num(v){
       const n = Number(v);
       return Number.isFinite(n) ? n : 0;
     }
-
-    function toYear(v){
+    function numOrNull(v){
       const n = Number(v);
-      if(!Number.isFinite(n) || n <= 0) return 0;
-      return Math.max(1980, Math.min(2100, Math.floor(n)));
+      return Number.isFinite(n) && n !== 0 ? n : (String(v||"").trim() ? n : null);
     }
-
     function genVehicleId(){
       return "VEH-" + Math.random().toString(16).slice(2,8).toUpperCase();
     }
 
-    function uniq(arr){
+    function statusPill(s){
+      const v = String(s||"draft").toLowerCase();
+      const cls = v==="available" ? "available" : v==="pending" ? "pending" : v==="sold" ? "sold" : "draft";
+      return `<span class="status ${cls}">${esc(v)}</span>`;
+    }
+
+    function dedupe(arr){
+      const seen = new Set();
       const out = [];
-      const s = new Set();
-      (arr||[]).forEach(x=>{
-        const v = String(x||"").trim();
-        if(!v) return;
-        if(s.has(v)) return;
-        s.add(v);
-        out.push(v);
-      });
+      for (const x of arr){
+        const k = String(x||"").trim();
+        if(!k) continue;
+        if(seen.has(k)) continue;
+        seen.add(k);
+        out.push(k);
+      }
       return out;
     }
 
-    async function safeJson(res){
-      try{ return await res.json(); }
-      catch{ return null; }
+    function trimUrl(u){
+      try{
+        const url = new URL(u);
+        const parts = url.pathname.split("/").filter(Boolean);
+        return parts.slice(-2).join("/");
+      }catch{
+        return String(u).slice(-22);
+      }
     }
 
     function esc(s){
       return String(s ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#39;");
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#39;");
+    }
+    function escAttr(s){ return esc(s); }
+
+    // ---- session ----
+    function saveSession(){
+      try{
+        localStorage.setItem("dealerSession", JSON.stringify({
+          token: state.token,
+          dealerId: state.dealerId,
+          dealerName: state.dealerName
+        }));
+      }catch{}
+    }
+    function loadSession(){
+      try{
+        const v = localStorage.getItem("dealerSession");
+        return v ? JSON.parse(v) : null;
+      }catch{ return null; }
+    }
+    function clearSession(){
+      try{ localStorage.removeItem("dealerSession"); }catch{}
     }
   </script>
 </body>
