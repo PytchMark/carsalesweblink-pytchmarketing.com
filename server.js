@@ -1,9 +1,13 @@
 // server.js (root)
 // Cloud Run-ready Express server:
-// - Serves your static UIs: / (storefront), /apps/dealer, /apps/admin
+// - Serves static UIs: / (storefront), /dealer, /admin
 // - Google Sheets as DB (one spreadsheet, dealer-per-tab model)
-// - GCS signed upload URLs to bucket samplemedia1 (env MEDIA_BUCKET)
+// - GCS signed upload URLs (env MEDIA_BUCKET)
 // - Admin + Dealer auth via Cloud Run env vars + passcode hashes
+//
+// ✅ Fixes included:
+// 1) Auto-expands dealer tabs so A2000:L2000 DOES NOT exceed grid limits
+// 2) Fix passcode hash parsing (supports both "$$" and legacy "$" formats)
 
 const express = require("express");
 const path = require("path");
@@ -30,8 +34,11 @@ const MEDIA_BUCKET = String(process.env.MEDIA_BUCKET || "samplemedia1");
 const GCS_PUBLIC_BASE = String(process.env.GCS_PUBLIC_BASE || "https://storage.googleapis.com");
 
 // Dealer sheet layout
-const DEALER_LEADS_START_ROW = Number(process.env.DEALER_LEADS_START_ROW || 2000); // keep leads far below vehicles
+const DEALER_LEADS_START_ROW = Number(process.env.DEALER_LEADS_START_ROW || 2000); // leads far below vehicles
 const ADMIN_SHEET_TITLE = String(process.env.ADMIN_SHEET_TITLE || "ADMIN");
+
+// When creating dealer tabs, ensure enough rows so we can safely write leads headers at row 2000
+const DEALER_MIN_ROWS = Number(process.env.DEALER_MIN_ROWS || Math.max(1200, DEALER_LEADS_START_ROW + 300));
 
 // ---------- Middleware ----------
 app.disable("x-powered-by");
@@ -48,9 +55,9 @@ app.use(express.json({ limit: "2mb" }));
 // Serve static files from repo root
 app.use(express.static(ROOT, { extensions: ["html"] }));
 
-// ---------- Static routing (no redirects; works with/without trailing slash) ----------
+// ---------- Static routing (works with/without trailing slash) ----------
 function serveAppIndex(appName) {
-  return (req, res) => res.sendFile(path.join(ROOT, "apps", appName, "index.html"));
+  return (_req, res) => res.sendFile(path.join(ROOT, "apps", appName, "index.html"));
 }
 
 app.get("/", serveAppIndex("storefront"));
@@ -62,8 +69,13 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ---------- JWT (no external deps) ----------
 function base64url(buf) {
-  return Buffer.from(buf).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return Buffer.from(buf)
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 }
+
 function signJwt(payload, expiresInSeconds) {
   const header = { alg: "HS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
@@ -76,6 +88,7 @@ function signJwt(payload, expiresInSeconds) {
   const sig = crypto.createHmac("sha256", JWT_SECRET).update(data).digest();
   return `${data}.${base64url(sig)}`;
 }
+
 function verifyJwt(token) {
   const parts = String(token || "").split(".");
   if (parts.length !== 3) throw new Error("bad token");
@@ -88,26 +101,30 @@ function verifyJwt(token) {
   if (payload.exp && now > payload.exp) throw new Error("expired");
   return payload;
 }
+
 function timingSafeEqual(a, b) {
   const aa = Buffer.from(String(a));
   const bb = Buffer.from(String(b));
   if (aa.length !== bb.length) return false;
   return crypto.timingSafeEqual(aa, bb);
 }
+
 function requireAuth(req, res, next) {
   const token = (req.headers.authorization || "").replace("Bearer ", "").trim();
   if (!token) return res.status(401).json({ ok: false, error: "Missing token" });
   try {
     req.user = verifyJwt(token);
     return next();
-  } catch (e) {
+  } catch (_e) {
     return res.status(401).json({ ok: false, error: "Invalid token" });
   }
 }
+
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== "admin") return res.status(403).json({ ok: false, error: "Forbidden" });
   next();
 }
+
 function requireDealer(req, res, next) {
   if (!req.user || req.user.role !== "dealer") return res.status(403).json({ ok: false, error: "Forbidden" });
   next();
@@ -117,26 +134,63 @@ function requireDealer(req, res, next) {
 function hashPasscode(passcode, salt) {
   const s = salt || crypto.randomBytes(16).toString("hex");
   const hash = crypto.pbkdf2Sync(String(passcode), s, 120000, 32, "sha256").toString("hex");
-  return `${s}$${hash}`;
+  // Prefer "$$" delimiter to avoid ambiguous split; verifier supports multiple formats.
+  return `${s}$$${hash}`;
 }
+
+function parseStoredHash(stored) {
+  const v = String(stored || "");
+
+  // Preferred format: salt$$hash
+  if (v.includes("$$")) {
+    const parts = v.split("$$");
+    if (parts.length === 2) return { salt: parts[0], hash: parts[1] };
+  }
+
+  // Legacy (if any): salt$hash OR salt$<empty>$hash
+  if (v.includes("$")) {
+    const parts = v.split("$").filter((x) => x !== "");
+    if (parts.length >= 2) return { salt: parts[0], hash: parts[1] };
+  }
+
+  // Alternative: salt:hash
+  if (v.includes(":")) {
+    const parts = v.split(":");
+    if (parts.length === 2) return { salt: parts[0], hash: parts[1] };
+  }
+
+  return null;
+}
+
 function verifyPasscode(passcode, stored) {
-  if (!stored || !stored.includes("$")) return false;
-  const [salt, hash] = stored.split("$");
-  const test = crypto.pbkdf2Sync(String(passcode), salt, 120000, 32, "sha256").toString("hex");
-  return timingSafeEqual(test, hash);
+  const parsed = parseStoredHash(stored);
+  if (!parsed) return false;
+  const test = crypto.pbkdf2Sync(String(passcode), parsed.salt, 120000, 32, "sha256").toString("hex");
+  return timingSafeEqual(test, parsed.hash);
 }
+
 function gen6() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
+
 function nowIso() {
   return new Date().toISOString();
 }
+
 function safeDealerTabName(dealerId) {
   // sheet tab titles: avoid slashes/brackets, keep short
   return String(dealerId || "")
     .trim()
     .replace(/[^\w\- ]+/g, "_")
     .slice(0, 80);
+}
+
+function digitsOnly(s) {
+  return String(s || "").replace(/\D+/g, "");
+}
+
+function makeVehicleId() {
+  return "VEH-" + crypto.randomBytes(3).toString("hex").toUpperCase();
 }
 
 // ---------- Google Sheets client ----------
@@ -152,50 +206,70 @@ async function getSheetsClient() {
 async function getSpreadsheetMeta(sheets) {
   const meta = await sheets.spreadsheets.get({
     spreadsheetId: GOOGLE_SHEET_ID,
-    fields: "sheets(properties(sheetId,title))",
+    fields: "sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))",
   });
   const tabs = meta.data.sheets || [];
   const byTitle = new Map();
-  for (const t of tabs) byTitle.set(t.properties.title, t.properties.sheetId);
+  for (const t of tabs) byTitle.set(t.properties.title, t.properties);
   return { tabs, byTitle };
 }
 
-async function ensureTab(sheets, title) {
-  const { byTitle } = await getSpreadsheetMeta(sheets);
-  if (byTitle.has(title)) return byTitle.get(title);
-
+async function ensureRows(sheets, sheetId, neededRowCount) {
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: GOOGLE_SHEET_ID,
     requestBody: {
-      requests: [{ addSheet: { properties: { title } } }],
+      requests: [
+        {
+          updateSheetProperties: {
+            properties: { sheetId, gridProperties: { rowCount: neededRowCount } },
+            fields: "gridProperties.rowCount",
+          },
+        },
+      ],
     },
+  });
+}
+
+async function ensureTab(sheets, title, minRows = 1000) {
+  const meta = await getSpreadsheetMeta(sheets);
+
+  if (meta.byTitle.has(title)) {
+    const props = meta.byTitle.get(title);
+    const currentRows = props.gridProperties?.rowCount || 1000;
+    if (currentRows < minRows) {
+      await ensureRows(sheets, props.sheetId, minRows);
+      const meta2 = await getSpreadsheetMeta(sheets);
+      return meta2.byTitle.get(title);
+    }
+    return props;
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    requestBody: { requests: [{ addSheet: { properties: { title } } }] },
   });
 
   const meta2 = await getSpreadsheetMeta(sheets);
-  return meta2.byTitle.get(title);
+  const props2 = meta2.byTitle.get(title);
+
+  const currentRows2 = props2.gridProperties?.rowCount || 1000;
+  if (currentRows2 < minRows) {
+    await ensureRows(sheets, props2.sheetId, minRows);
+    const meta3 = await getSpreadsheetMeta(sheets);
+    return meta3.byTitle.get(title);
+  }
+
+  return props2;
 }
 
 async function ensureAdminSheet(sheets) {
-  await ensureTab(sheets, ADMIN_SHEET_TITLE);
+  await ensureTab(sheets, ADMIN_SHEET_TITLE, 200);
 
   // Ensure headers exist in ADMIN!A1:H1
-  const headers = [
-    "dealerId",
-    "name",
-    "status",
-    "passcodeHash",
-    "whatsapp",
-    "logoUrl",
-    "createdAt",
-    "updatedAt",
-  ];
-
+  const headers = ["dealerId", "name", "status", "passcodeHash", "whatsapp", "logoUrl", "createdAt", "updatedAt"];
   const range = `${ADMIN_SHEET_TITLE}!A1:H1`;
-  const existing = await sheets.spreadsheets.values.get({
-    spreadsheetId: GOOGLE_SHEET_ID,
-    range,
-  });
 
+  const existing = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
   const row = (existing.data.values && existing.data.values[0]) || [];
   if (row.join("|") !== headers.join("|")) {
     await sheets.spreadsheets.values.update({
@@ -209,7 +283,9 @@ async function ensureAdminSheet(sheets) {
 
 async function ensureDealerTabLayout(sheets, dealerId) {
   const title = safeDealerTabName(dealerId);
-  await ensureTab(sheets, title);
+
+  // ✅ ensure enough rows for A2000:L2000
+  await ensureTab(sheets, title, DEALER_MIN_ROWS);
 
   // Vehicles header row at A1:K1
   const vehHeaders = [
@@ -227,10 +303,7 @@ async function ensureDealerTabLayout(sheets, dealerId) {
   ];
 
   const vehRange = `${title}!A1:K1`;
-  const existingVeh = await sheets.spreadsheets.values.get({
-    spreadsheetId: GOOGLE_SHEET_ID,
-    range: vehRange,
-  });
+  const existingVeh = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: vehRange });
   const rowVeh = (existingVeh.data.values && existingVeh.data.values[0]) || [];
   if (rowVeh.join("|") !== vehHeaders.join("|")) {
     await sheets.spreadsheets.values.update({
@@ -256,12 +329,11 @@ async function ensureDealerTabLayout(sheets, dealerId) {
     "source",
     "status",
   ];
-  const leadRow = DEALER_LEADS_START_ROW; // 2000 by default
+
+  const leadRow = DEALER_LEADS_START_ROW;
   const leadRange = `${title}!A${leadRow}:L${leadRow}`;
-  const existingLead = await sheets.spreadsheets.values.get({
-    spreadsheetId: GOOGLE_SHEET_ID,
-    range: leadRange,
-  });
+
+  const existingLead = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: leadRange });
   const rowLead = (existingLead.data.values && existingLead.data.values[0]) || [];
   if (rowLead.join("|") !== leadHeaders.join("|")) {
     await sheets.spreadsheets.values.update({
@@ -275,7 +347,6 @@ async function ensureDealerTabLayout(sheets, dealerId) {
 
 async function adminListDealers(sheets) {
   await ensureAdminSheet(sheets);
-
   const range = `${ADMIN_SHEET_TITLE}!A2:H`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
   const rows = res.data.values || [];
@@ -309,7 +380,6 @@ async function adminUpsertDealer(sheets, dealer) {
   ];
 
   if (idx === -1) {
-    // append
     await sheets.spreadsheets.values.append({
       spreadsheetId: GOOGLE_SHEET_ID,
       range: `${ADMIN_SHEET_TITLE}!A:H`,
@@ -318,8 +388,7 @@ async function adminUpsertDealer(sheets, dealer) {
       requestBody: { values: [rowValues] },
     });
   } else {
-    // update row (idx + 2 because header row + 1-based)
-    const rowNum = idx + 2;
+    const rowNum = idx + 2; // header row + 1-based
     await sheets.spreadsheets.values.update({
       spreadsheetId: GOOGLE_SHEET_ID,
       range: `${ADMIN_SHEET_TITLE}!A${rowNum}:H${rowNum}`,
@@ -373,7 +442,6 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   const tab = safeDealerTabName(dealerId);
   await ensureDealerTabLayout(sheets, dealerId);
 
-  // Find existing by vehicleId
   const range = `${tab}!A2:K`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
   const rows = res.data.values || [];
@@ -386,6 +454,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
     }
   }
 
+  const updatedAt = nowIso();
   const rowValues = [
     vehicle.vehicleId,
     vehicle.title || "",
@@ -397,7 +466,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
     vehicle.notes || "",
     vehicle.heroImage || "",
     JSON.stringify(vehicle.images || []),
-    nowIso(),
+    updatedAt,
   ];
 
   if (foundRowNum === -1) {
@@ -417,28 +486,32 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
     });
   }
 
-  return { ...vehicle, updatedAt: nowIso(), dealerId };
+  return { ...vehicle, updatedAt, dealerId };
 }
 
 async function dealerAppendLead(sheets, dealerId, lead) {
   const tab = safeDealerTabName(dealerId);
   await ensureDealerTabLayout(sheets, dealerId);
 
-  const leadId = lead.leadId || ("lead_" + crypto.randomBytes(6).toString("hex"));
-  const values = [[
-    nowIso(),
-    leadId,
-    lead.vehicleId || "",
-    lead.type || "video",
-    lead.name || "",
-    lead.phone || "",
-    lead.email || "",
-    lead.preferredDate || "",
-    lead.preferredTime || "",
-    lead.notes || "",
-    lead.source || "storefront",
-    lead.status || "new",
-  ]];
+  const leadId = lead.leadId || "lead_" + crypto.randomBytes(6).toString("hex");
+  const createdAt = nowIso();
+
+  const values = [
+    [
+      createdAt,
+      leadId,
+      lead.vehicleId || "",
+      lead.type || "video",
+      lead.name || "",
+      lead.phone || "",
+      lead.email || "",
+      lead.preferredDate || "",
+      lead.preferredTime || "",
+      lead.notes || "",
+      lead.source || "storefront",
+      lead.status || "new",
+    ],
+  ];
 
   // Append starting after lead header row (startRow+1)
   const appendRange = `${tab}!A${DEALER_LEADS_START_ROW + 1}:L`;
@@ -450,7 +523,7 @@ async function dealerAppendLead(sheets, dealerId, lead) {
     requestBody: { values },
   });
 
-  return { ...lead, leadId, createdAt: nowIso(), status: lead.status || "new" };
+  return { ...lead, leadId, createdAt, status: lead.status || "new" };
 }
 
 // ---------- GCS (Signed upload URLs) ----------
@@ -479,6 +552,26 @@ async function signUpload({ dealerId, vehicleId, type, filename, contentType }) 
   return { url, objectKey, publicUrl };
 }
 
+function publicDealer(d) {
+  return {
+    dealerId: d.dealerId,
+    name: d.name,
+    status: d.status,
+    whatsapp: d.whatsapp,
+    logoUrl: d.logoUrl,
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+  };
+}
+
+function filterPublicVehicles(list) {
+  return (list || []).filter((v) => {
+    const s = String(v.status || "").toLowerCase();
+    // storefront shows vehicles that are basically "for sale"
+    return ["published", "available", "in_stock", "instock"].includes(s);
+  });
+}
+
 // =========================
 // API ROUTES
 // =========================
@@ -496,20 +589,21 @@ app.post("/api/admin/login", async (req, res) => {
   return res.json({ ok: true, token });
 });
 
-app.get("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
+app.get("/api/admin/dealers", requireAuth, requireAdmin, async (_req, res) => {
   try {
     const sheets = await getSheetsClient();
     const dealers = await adminListDealers(sheets);
 
-    // compute vehicle counts quickly (demo-friendly; can be optimized later)
-    const withCounts = await Promise.all(dealers.map(async d => {
-      try {
-        const vehicles = await dealerListVehicles(sheets, d.dealerId);
-        return { ...publicDealer(d), vehicleCount: vehicles.length };
-      } catch {
-        return { ...publicDealer(d), vehicleCount: 0 };
-      }
-    }));
+    const withCounts = await Promise.all(
+      dealers.map(async (d) => {
+        try {
+          const vehicles = await dealerListVehicles(sheets, d.dealerId);
+          return { ...publicDealer(d), vehicleCount: vehicles.length };
+        } catch {
+          return { ...publicDealer(d), vehicleCount: 0 };
+        }
+      })
+    );
 
     res.json({ ok: true, dealers: withCounts });
   } catch (e) {
@@ -519,7 +613,7 @@ app.get("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
 
 app.post("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { dealerId, name, status, whatsapp, logoUrl, op } = req.body || {};
+    const { dealerId, name, status, whatsapp, logoUrl } = req.body || {};
     if (!dealerId || !name) return res.status(400).json({ ok: false, error: "dealerId and name required" });
 
     const sheets = await getSheetsClient();
@@ -530,7 +624,6 @@ app.post("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
     let passcode = null;
     let passcodeHash = existing?.passcodeHash || "";
 
-    // If creating new dealer, generate passcode
     if (isNew) {
       passcode = gen6();
       passcodeHash = hashPasscode(passcode);
@@ -539,7 +632,7 @@ app.post("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
     const record = {
       dealerId,
       name,
-      status: (status || existing?.status || "active").toLowerCase(),
+      status: String(status || existing?.status || "active").toLowerCase(),
       passcodeHash,
       whatsapp: digitsOnly(whatsapp || existing?.whatsapp || ""),
       logoUrl: String(logoUrl || existing?.logoUrl || ""),
@@ -579,8 +672,7 @@ app.post("/api/admin/reset-passcode", requireAuth, requireAdmin, async (req, res
   }
 });
 
-// Optional: admin inventory rollup
-app.get("/api/admin/inventory", requireAuth, requireAdmin, async (req, res) => {
+app.get("/api/admin/inventory", requireAuth, requireAdmin, async (_req, res) => {
   try {
     const sheets = await getSheetsClient();
     const dealers = await adminListDealers(sheets);
@@ -599,15 +691,9 @@ app.get("/api/admin/inventory", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// (stub) admin requests rollup (from dealer leads section)
-app.get("/api/admin/requests", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    // For v1, keep this light: requests are stored per dealer tab; you can add full rollup later.
-    // We'll return empty for now so UI doesn't break.
-    res.json({ ok: true, requests: [] });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e?.message || "Failed to load requests" });
-  }
+app.get("/api/admin/requests", requireAuth, requireAdmin, async (_req, res) => {
+  // Keep v1 light; stored per dealer tab. UI won't break.
+  res.json({ ok: true, requests: [] });
 });
 
 // ----- DEALER -----
@@ -673,7 +759,6 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
   }
 });
 
-// Signed upload URL for dealer
 app.post("/api/dealer/uploads/sign", requireAuth, requireDealer, async (req, res) => {
   try {
     const dealerId = req.user.dealerId;
@@ -689,7 +774,7 @@ app.post("/api/dealer/uploads/sign", requireAuth, requireDealer, async (req, res
   }
 });
 
-// Back-compat route you used earlier (dealerId in URL)
+// Back-compat route (dealerId in URL)
 app.post("/api/dealers/:dealerId/vehicles/:vehicleId/uploads/sign", requireAuth, async (req, res) => {
   try {
     const dealerId = req.params.dealerId;
@@ -726,7 +811,6 @@ app.get("/api/public/vehicles", async (req, res) => {
       return res.json({ vehicles: filterPublicVehicles(vehicles) });
     }
 
-    // If dealerId not provided, we aggregate all dealers (can be slower with many dealers)
     const dealers = await adminListDealers(sheets);
     const all = [];
     for (const d of dealers) {
@@ -773,38 +857,14 @@ app.post("/api/public/leads", async (req, res) => {
   }
 });
 
-// ---------- Helpers ----------
-function publicDealer(d) {
-  return {
-    dealerId: d.dealerId,
-    name: d.name,
-    status: d.status,
-    whatsapp: d.whatsapp,
-    logoUrl: d.logoUrl,
-    createdAt: d.createdAt,
-    updatedAt: d.updatedAt,
-  };
-}
-function digitsOnly(s) {
-  return String(s || "").replace(/\D+/g, "");
-}
-function makeVehicleId() {
-  return "VEH-" + crypto.randomBytes(3).toString("hex").toUpperCase();
-}
-function filterPublicVehicles(list) {
-  return (list || []).filter((v) => {
-    const s = String(v.status || "").toLowerCase();
-    // storefront shows vehicles that are basically "for sale"
-    return ["published", "available", "in_stock", "instock"].includes(s);
-  });
-}
-
 // ---------- 404 ----------
-app.use((req, res) => res.status(404).send("Not Found"));
+app.use((_req, res) => res.status(404).send("Not Found"));
 
 // ---------- Start server (Cloud Run expects 0.0.0.0 and PORT) ----------
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`carsalesweblink running on :${PORT}`);
   console.log(`MEDIA_BUCKET=${MEDIA_BUCKET}`);
   console.log(`GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID ? "set" : "missing"}`);
+  console.log(`DEALER_LEADS_START_ROW=${DEALER_LEADS_START_ROW}`);
+  console.log(`DEALER_MIN_ROWS=${DEALER_MIN_ROWS}`);
 });
