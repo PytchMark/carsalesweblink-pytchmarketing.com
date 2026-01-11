@@ -2,12 +2,14 @@
 // Cloud Run-ready Express server:
 // - Serves static UIs: / (storefront), /dealer, /admin
 // - Google Sheets as DB (one spreadsheet, dealer-per-tab model)
-// - GCS signed upload URLs (env MEDIA_BUCKET)
+// - OPTIONAL: GCS signed upload URLs (env MEDIA_BUCKET) [kept for back-compat]
 // - Admin + Dealer auth via Cloud Run env vars + passcode hashes
 //
 // ✅ Fixes included:
 // 1) Auto-expands dealer tabs so A2000:L2000 DOES NOT exceed grid limits
 // 2) Fix passcode hash parsing (supports both "$$" and legacy "$" formats)
+// 3) Adds /api/public/config to expose Cloudinary env config to dealer UI
+// 4) Adds small request logger for /api/* errors (helps debugging Cloud Run)
 
 const express = require("express");
 const path = require("path");
@@ -16,7 +18,7 @@ const crypto = require("crypto");
 // Google APIs
 const { google } = require("googleapis");
 
-// GCS
+// GCS (optional/back-compat)
 const { Storage } = require("@google-cloud/storage");
 
 const app = express();
@@ -30,15 +32,24 @@ const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "123456");
 
 const JWT_SECRET = String(process.env.JWT_SECRET || "dev-secret-change-me");
 const GOOGLE_SHEET_ID = String(process.env.GOOGLE_SHEET_ID || ""); // REQUIRED for sheets features
+
+// GCS settings (optional)
 const MEDIA_BUCKET = String(process.env.MEDIA_BUCKET || "samplemedia1");
 const GCS_PUBLIC_BASE = String(process.env.GCS_PUBLIC_BASE || "https://storage.googleapis.com");
+
+// Cloudinary (for dealer uploads)
+const CLOUDINARY_CLOUD_NAME = String(process.env.CLOUDINARY_CLOUD_NAME || "");
+const CLOUDINARY_UPLOAD_PRESET = String(process.env.CLOUDINARY_UPLOAD_PRESET || "");
+const CLOUDINARY_BASE_FOLDER = String(process.env.CLOUDINARY_BASE_FOLDER || "mediaexclusive");
 
 // Dealer sheet layout
 const DEALER_LEADS_START_ROW = Number(process.env.DEALER_LEADS_START_ROW || 2000); // leads far below vehicles
 const ADMIN_SHEET_TITLE = String(process.env.ADMIN_SHEET_TITLE || "ADMIN");
 
 // When creating dealer tabs, ensure enough rows so we can safely write leads headers at row 2000
-const DEALER_MIN_ROWS = Number(process.env.DEALER_MIN_ROWS || Math.max(1200, DEALER_LEADS_START_ROW + 300));
+const DEALER_MIN_ROWS = Number(
+  process.env.DEALER_MIN_ROWS || Math.max(1200, DEALER_LEADS_START_ROW + 300)
+);
 
 // ---------- Middleware ----------
 app.disable("x-powered-by");
@@ -51,6 +62,19 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: "2mb" }));
+
+// Simple API request logger (helps debug 401/500 in Cloud Run logs)
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    const start = Date.now();
+    res.on("finish", () => {
+      const ms = Date.now() - start;
+      // keep logs small; never log auth tokens
+      console.log(`[API] ${req.method} ${req.path} -> ${res.statusCode} (${ms}ms)`);
+    });
+  }
+  next();
+});
 
 // Serve static files from repo root
 app.use(express.static(ROOT, { extensions: ["html"] }));
@@ -147,7 +171,7 @@ function parseStoredHash(stored) {
     if (parts.length === 2) return { salt: parts[0], hash: parts[1] };
   }
 
-  // Legacy (if any): salt$hash OR salt$<empty>$hash
+  // Legacy: salt$hash OR salt$<empty>$hash
   if (v.includes("$")) {
     const parts = v.split("$").filter((x) => x !== "");
     if (parts.length >= 2) return { salt: parts[0], hash: parts[1] };
@@ -265,7 +289,6 @@ async function ensureTab(sheets, title, minRows = 1000) {
 async function ensureAdminSheet(sheets) {
   await ensureTab(sheets, ADMIN_SHEET_TITLE, 200);
 
-  // Ensure headers exist in ADMIN!A1:H1
   const headers = ["dealerId", "name", "status", "passcodeHash", "whatsapp", "logoUrl", "createdAt", "updatedAt"];
   const range = `${ADMIN_SHEET_TITLE}!A1:H1`;
 
@@ -403,6 +426,15 @@ async function adminGetDealer(sheets, dealerId) {
   return dealers.find((d) => d.dealerId === dealerId) || null;
 }
 
+function safeParseJsonArray(v) {
+  try {
+    const x = JSON.parse(v || "[]");
+    return Array.isArray(x) ? x : [];
+  } catch {
+    return [];
+  }
+}
+
 // Vehicles live at top (A2:K...)
 async function dealerListVehicles(sheets, dealerId) {
   const tab = safeDealerTabName(dealerId);
@@ -427,15 +459,6 @@ async function dealerListVehicles(sheets, dealerId) {
       updatedAt: r[10] || "",
       dealerId,
     }));
-}
-
-function safeParseJsonArray(v) {
-  try {
-    const x = JSON.parse(v || "[]");
-    return Array.isArray(x) ? x : [];
-  } catch {
-    return [];
-  }
 }
 
 async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
@@ -526,7 +549,7 @@ async function dealerAppendLead(sheets, dealerId, lead) {
   return { ...lead, leadId, createdAt, status: lead.status || "new" };
 }
 
-// ---------- GCS (Signed upload URLs) ----------
+// ---------- GCS (Signed upload URLs) - OPTIONAL/BACK-COMPAT ----------
 const storage = new Storage();
 const bucket = storage.bucket(MEDIA_BUCKET);
 
@@ -552,6 +575,7 @@ async function signUpload({ dealerId, vehicleId, type, filename, contentType }) 
   return { url, objectKey, publicUrl };
 }
 
+// ---------- Helpers ----------
 function publicDealer(d) {
   return {
     dealerId: d.dealerId,
@@ -575,6 +599,19 @@ function filterPublicVehicles(list) {
 // =========================
 // API ROUTES
 // =========================
+
+// ----- PUBLIC CONFIG (Cloudinary env exposure for frontends) -----
+app.get("/api/public/config", (_req, res) => {
+  res.json({
+    ok: true,
+    cloudinary: {
+      cloudName: CLOUDINARY_CLOUD_NAME,
+      uploadPreset: CLOUDINARY_UPLOAD_PRESET,
+      baseFolder: CLOUDINARY_BASE_FOLDER,
+    },
+    // If you ever want to expose other non-secret config, do it here.
+  });
+});
 
 // ----- ADMIN -----
 app.post("/api/admin/login", async (req, res) => {
@@ -740,8 +777,8 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
       title: String(body.title || "").trim(),
       make: String(body.make || "").trim(),
       model: String(body.model || "").trim(),
-      year: body.year ? Number(body.year) : null,
-      price: body.price ? Number(body.price) : 0,
+      year: body.year != null && body.year !== "" ? Number(body.year) : null,
+      price: body.price != null && body.price !== "" ? Number(body.price) : 0,
       status: String(body.status || "available").trim(),
       notes: String(body.notes || "").trim(),
       heroImage: String(body.heroImage || "").trim(),
@@ -759,6 +796,7 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
   }
 });
 
+// OPTIONAL/BACK-COMPAT: Signed upload URL for GCS
 app.post("/api/dealer/uploads/sign", requireAuth, requireDealer, async (req, res) => {
   try {
     const dealerId = req.user.dealerId;
@@ -774,7 +812,7 @@ app.post("/api/dealer/uploads/sign", requireAuth, requireDealer, async (req, res
   }
 });
 
-// Back-compat route (dealerId in URL)
+// OPTIONAL/BACK-COMPAT: dealerId in URL
 app.post("/api/dealers/:dealerId/vehicles/:vehicleId/uploads/sign", requireAuth, async (req, res) => {
   try {
     const dealerId = req.params.dealerId;
@@ -863,8 +901,15 @@ app.use((_req, res) => res.status(404).send("Not Found"));
 // ---------- Start server (Cloud Run expects 0.0.0.0 and PORT) ----------
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`carsalesweblink running on :${PORT}`);
-  console.log(`MEDIA_BUCKET=${MEDIA_BUCKET}`);
   console.log(`GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID ? "set" : "missing"}`);
   console.log(`DEALER_LEADS_START_ROW=${DEALER_LEADS_START_ROW}`);
   console.log(`DEALER_MIN_ROWS=${DEALER_MIN_ROWS}`);
+
+  // Cloudinary config visibility (safe)
+  console.log(`CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME ? "set" : "missing"}`);
+  console.log(`CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET ? "set" : "missing"}`);
+  console.log(`CLOUDINARY_BASE_FOLDER=${CLOUDINARY_BASE_FOLDER}`);
+
+  // GCS info (optional)
+  console.log(`MEDIA_BUCKET=${MEDIA_BUCKET}`);
 });
