@@ -391,7 +391,8 @@
         </div>
         <div class="actions">
           <a class="btn btn-ghost" href="/">← Storefront</a>
-          <a class="btn btn-ghost" href="/apps/dealer">Dealer ↗</a>
+          <!-- ✅ FIXED: server routes dealer at /dealer (not /apps/dealer) -->
+          <a class="btn btn-ghost" href="/dealer">Dealer ↗</a>
         </div>
       </div>
 
@@ -516,13 +517,15 @@
             <div class="statusline" id="dealerActionStatus"></div>
           </div>
 
-          <!-- System Info -->
+          <!-- System Info (updated to Cloudinary-first) -->
           <div class="panel" style="margin-top:10px">
             <h3>System</h3>
             <div class="hint">
-              Media bucket: <span class="mono" id="bucketName">samplemedia1</span><br/>
-              Upload path: <span class="mono">dealers/{dealerId}/vehicles/{vehicleId}/images/original/</span><br/>
-              Leads path (server-side): <span class="mono">dealers/{dealerId}/leads/</span>
+              Cloudinary cloud: <span class="mono" id="cloudName">(loading)</span><br/>
+              Base folder: <span class="mono" id="cloudFolder">(loading)</span><br/>
+              Upload path: <span class="mono">dealers/{dealerId}/vehicles/{vehicleId}/</span><br/>
+              Leads path (Sheets): <span class="mono">{dealerTab}!A{startRow}</span><br/>
+              <span style="color:var(--muted2)">GCS signing is optional/back-compat (MEDIA_BUCKET) if enabled.</span>
             </div>
           </div>
         </div>
@@ -631,7 +634,8 @@
     // GET  /api/admin/inventory              (auth) -> { ok:true, vehicles:[...] }
     // GET  /api/admin/requests               (auth) -> { ok:true, requests:[...] }
     //
-    // This UI supports DEMO MODE if API isn't ready.
+    // Public:
+    // GET  /api/public/config                -> { ok:true, cloudinary:{ cloudName, uploadPreset, baseFolder } }
 
     const API = {
       login: () => "/api/admin/login",
@@ -639,6 +643,7 @@
       resetPass: () => "/api/admin/reset-passcode",
       inventory: () => "/api/admin/inventory",
       requests: () => "/api/admin/requests",
+      publicConfig: () => "/api/public/config",
     };
 
     const el = (id) => document.getElementById(id);
@@ -676,7 +681,9 @@
       lastUpdated: el("lastUpdated"),
       dashStatus: el("dashStatus"),
 
-      bucketName: el("bucketName"),
+      // System panel (Cloudinary)
+      cloudName: el("cloudName"),
+      cloudFolder: el("cloudFolder"),
 
       dealerActions: el("dealerActions"),
       newDealerName: el("newDealerName"),
@@ -718,15 +725,22 @@
 
       selectedDealer: null,
 
-      // demo-only passcodes
-      demoPasscodes: {}
+      demoPasscodes: {},
+
+      config: {
+        cloudinary: { cloudName:"", baseFolder:"", uploadPreset:"" }
+      }
     };
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       wire();
       // nice for your test run
       ui.username.value = "adminpytch";
       ui.password.value = "123456";
+
+      // Load public config (safe + unauthenticated)
+      await loadPublicConfig();
+      paintSystemPanel();
     });
 
     function wire(){
@@ -757,6 +771,25 @@
       ui.btnSaveDealer.addEventListener("click", saveDealerChanges);
     }
 
+    async function loadPublicConfig(){
+      try{
+        const res = await fetch(API.publicConfig(), { headers:{ "Accept":"application/json" }});
+        const data = await safeJson(res);
+        if(res.ok && data?.ok){
+          state.config.cloudinary.cloudName = data.cloudinary?.cloudName || "";
+          state.config.cloudinary.baseFolder = data.cloudinary?.baseFolder || "";
+          state.config.cloudinary.uploadPreset = data.cloudinary?.uploadPreset || "";
+        }
+      }catch{
+        // ignore
+      }
+    }
+
+    function paintSystemPanel(){
+      ui.cloudName.textContent = state.config.cloudinary.cloudName || "missing";
+      ui.cloudFolder.textContent = state.config.cloudinary.baseFolder || "mediaexclusive";
+    }
+
     async function doLogin(){
       const username = (ui.username.value||"").trim();
       const password = (ui.password.value||"").trim();
@@ -779,16 +812,15 @@
         setApi("Live", "on");
         enterDashboard(username);
       }catch(e){
-        // if backend isn't ready, allow demo
-        setApi("Demo", "err");
-        setLoginStatus("API login not ready. Use Demo mode to continue UI build.", true);
+        setApi("Error", "err");
+        setLoginStatus("API login failed. Use Demo mode if you're testing UI only.", true);
       }
     }
 
     function enterDemo(){
       state.apiOnline = false;
       state.token = "demo-token";
-      setApi("Demo", "warn");
+      setApi("Demo", "err");
       enterDashboard("adminpytch");
     }
 
@@ -876,13 +908,11 @@
         : tab==="requests" ? "Monitor incoming leads. Promote from New → Booked → Closed."
         : "Review environment-driven settings and shortcuts.";
 
-      // show dealer actions only on dealer tab
       ui.dealerActions.classList.toggle("hidden", tab!=="dealers");
 
       buildStatusFilterOptions(tab);
       buildTableHeaders(tab);
 
-      // when switching tabs, optionally load that tab from API
       refresh();
     }
 
@@ -908,7 +938,6 @@
         add("booked", "Booked");
         add("closed", "Closed");
       } else {
-        // settings tab
         add("", "All");
       }
 
@@ -1006,13 +1035,16 @@
     }
 
     function settingsRows(){
-      // UI-only view. Real values come from Cloud Run env vars + server response later.
+      const c = state.config.cloudinary || {};
       return [
-        { item:"MEDIA_BUCKET", value:"samplemedia1", hint:"Where images/videos are stored", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set in Cloud Run env vars.', 'success')">How to change</button>` },
+        { item:"CLOUDINARY_CLOUD_NAME", value:(c.cloudName || "(missing)"), hint:"Dealer uploads + storefront images", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set CLOUDINARY_CLOUD_NAME in Cloud Run.', 'success')">How to change</button>` },
+        { item:"CLOUDINARY_UPLOAD_PRESET", value:(c.uploadPreset ? "(set)" : "(missing)"), hint:"Unsigned preset for dealer uploads", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set CLOUDINARY_UPLOAD_PRESET in Cloud Run.', 'success')">How to change</button>` },
+        { item:"CLOUDINARY_BASE_FOLDER", value:(c.baseFolder || "mediaexclusive"), hint:"Base folder for uploads", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set CLOUDINARY_BASE_FOLDER in Cloud Run.', 'success')">How to change</button>` },
+        { item:"GOOGLE_SHEET_ID", value:"(server)", hint:"Main spreadsheet for dealer tabs", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set GOOGLE_SHEET_ID in Cloud Run.', 'success')">How to change</button>` },
         { item:"ADMIN_USERNAME", value:"(server)", hint:"Admin login username", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Change ADMIN_USERNAME in Cloud Run.', 'success')">How to change</button>` },
         { item:"ADMIN_PASSWORD", value:"(server)", hint:"Admin login password", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Change ADMIN_PASSWORD in Cloud Run.', 'success')">How to change</button>` },
         { item:"JWT_SECRET", value:"(server)", hint:"Signs login tokens", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Keep JWT_SECRET long + private.', 'success')">Best practice</button>` },
-        { item:"GOOGLE_SHEET_ID", value:"(server)", hint:"Main spreadsheet for dealer tabs", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set GOOGLE_SHEET_ID in Cloud Run.', 'success')">How to change</button>` },
+        { item:"MEDIA_BUCKET (optional)", value:"(server)", hint:"Only used for GCS signed uploads (back-compat)", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Only needed if you still use GCS signed uploads.', 'success')">When needed</button>` },
       ];
     }
 
@@ -1031,7 +1063,6 @@
       ui.mDealerWhatsApp.value = dealer.whatsapp || "";
       ui.mDealerLogo.value = dealer.logoUrl || dealer.logo || "";
 
-      // demo-only: show passcode if we have it
       const demoPass = state.demoPasscodes[dealer.dealerId];
       ui.mPasscode.textContent = demoPass ? demoPass : "••••••";
 
@@ -1067,7 +1098,6 @@
 
       try{
         if(!state.apiOnline){
-          // demo update
           const idx = state.dealers.findIndex(d => d.dealerId === state.selectedDealer.dealerId);
           if(idx>-1){
             state.dealers[idx] = { ...state.dealers[idx], ...payload };
@@ -1078,11 +1108,10 @@
           return;
         }
 
-        // For API, simplest approach is POST /api/admin/dealers for upsert
         const res = await fetch(API.dealers(), {
           method:"POST",
           headers:{ ...authHeaders(), "Content-Type":"application/json", "Accept":"application/json" },
-          body: JSON.stringify({ ...payload, op:"upsert" })
+          body: JSON.stringify(payload)
         });
         const data = await safeJson(res);
         if(!res.ok || !data?.ok) throw new Error(data?.error || "Save failed");
@@ -1107,7 +1136,6 @@
 
       try{
         if(!state.apiOnline){
-          // demo reset
           const newPass = String(Math.floor(100000 + Math.random()*900000));
           state.demoPasscodes[dealerId] = newPass;
           ui.mPasscode.textContent = newPass;
@@ -1124,7 +1152,6 @@
         const data = await safeJson(res);
         if(!res.ok || !data?.ok) throw new Error(data?.error || "Reset failed");
 
-        // If backend returns passcode, we show it (admin only)
         if(data.passcode) ui.mPasscode.textContent = String(data.passcode);
 
         ui.mStatus.textContent = "Passcode reset.";
@@ -1160,7 +1187,6 @@
 
       try{
         if(!state.apiOnline){
-          // demo add
           const exists = state.dealers.some(d => d.dealerId === payload.dealerId);
           if(exists) throw new Error("Dealer ID already exists (demo).");
 
@@ -1191,7 +1217,6 @@
         const data = await safeJson(res);
         if(!res.ok || !data?.ok) throw new Error(data?.error || "Create failed");
 
-        // If backend returns passcode, show it for admin to copy once.
         if(data.passcode){
           ui.dealerActionStatus.textContent = `Created. New passcode: ${data.passcode}`;
         } else {
@@ -1220,8 +1245,6 @@
     // Demo seed data
     // =============================
     function seedDemoIfNeeded(){
-      ui.bucketName.textContent = "samplemedia1";
-
       if(state.dealers.length) return;
 
       state.dealers = [
@@ -1274,7 +1297,6 @@
     function setApi(text, mode){
       ui.apiStatus.textContent = text || "—";
       ui.apiDot.classList.remove("on","err");
-      // default warn dot already present
       if(mode==="on") ui.apiDot.classList.add("on");
       if(mode==="err") ui.apiDot.classList.add("err");
     }
@@ -1323,7 +1345,6 @@
     }
 
     function digits(s){
-      // keep only digits for whatsapp
       return String(s||"").replace(/\D+/g,"").trim();
     }
 
