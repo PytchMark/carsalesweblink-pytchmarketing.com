@@ -10,6 +10,10 @@
 // 2) Fix passcode hash parsing (supports both "$$" and legacy "$" formats)
 // 3) Adds /api/public/config to expose Cloudinary env config to dealer UI
 // 4) Adds small request logger for /api/* errors (helps debugging Cloud Run)
+// 5) Adds an error-handler to log stack traces in Cloud Run logs
+// 6) Makes GCS signing optional (won't crash if bucket perms are missing and you don't use it)
+
+"use strict";
 
 const express = require("express");
 const path = require("path");
@@ -19,7 +23,13 @@ const crypto = require("crypto");
 const { google } = require("googleapis");
 
 // GCS (optional/back-compat)
-const { Storage } = require("@google-cloud/storage");
+let Storage;
+try {
+  // Allow running even if @google-cloud/storage isn't installed (local/dev)
+  ({ Storage } = require("@google-cloud/storage"));
+} catch {
+  Storage = null;
+}
 
 const app = express();
 
@@ -37,7 +47,7 @@ const GOOGLE_SHEET_ID = String(process.env.GOOGLE_SHEET_ID || ""); // REQUIRED f
 const MEDIA_BUCKET = String(process.env.MEDIA_BUCKET || "samplemedia1");
 const GCS_PUBLIC_BASE = String(process.env.GCS_PUBLIC_BASE || "https://storage.googleapis.com");
 
-// Cloudinary (for dealer uploads)
+// Cloudinary (for dealer uploads - client-side unsigned preset)
 const CLOUDINARY_CLOUD_NAME = String(process.env.CLOUDINARY_CLOUD_NAME || "");
 const CLOUDINARY_UPLOAD_PRESET = String(process.env.CLOUDINARY_UPLOAD_PRESET || "");
 const CLOUDINARY_BASE_FOLDER = String(process.env.CLOUDINARY_BASE_FOLDER || "mediaexclusive");
@@ -47,9 +57,7 @@ const DEALER_LEADS_START_ROW = Number(process.env.DEALER_LEADS_START_ROW || 2000
 const ADMIN_SHEET_TITLE = String(process.env.ADMIN_SHEET_TITLE || "ADMIN");
 
 // When creating dealer tabs, ensure enough rows so we can safely write leads headers at row 2000
-const DEALER_MIN_ROWS = Number(
-  process.env.DEALER_MIN_ROWS || Math.max(1200, DEALER_LEADS_START_ROW + 300)
-);
+const DEALER_MIN_ROWS = Number(process.env.DEALER_MIN_ROWS || Math.max(1200, DEALER_LEADS_START_ROW + 300));
 
 // ---------- Middleware ----------
 app.disable("x-powered-by");
@@ -69,7 +77,6 @@ app.use((req, res, next) => {
     const start = Date.now();
     res.on("finish", () => {
       const ms = Date.now() - start;
-      // keep logs small; never log auth tokens
       console.log(`[API] ${req.method} ${req.path} -> ${res.statusCode} (${ms}ms)`);
     });
   }
@@ -550,20 +557,37 @@ async function dealerAppendLead(sheets, dealerId, lead) {
 }
 
 // ---------- GCS (Signed upload URLs) - OPTIONAL/BACK-COMPAT ----------
-const storage = new Storage();
-const bucket = storage.bucket(MEDIA_BUCKET);
+const gcs = {
+  enabled: Boolean(Storage),
+  storage: null,
+  bucket: null,
+};
+
+if (Storage) {
+  try {
+    gcs.storage = new Storage();
+    gcs.bucket = gcs.storage.bucket(MEDIA_BUCKET);
+  } catch (e) {
+    console.warn("[GCS] Disabled: could not init Storage:", e?.message || e);
+    gcs.enabled = false;
+  }
+} else {
+  console.warn("[GCS] @google-cloud/storage not installed. GCS signing disabled.");
+}
 
 function sanitizeFilename(name) {
   return String(name || "file").replace(/[^\w.\-]+/g, "_").slice(0, 140);
 }
 
 async function signUpload({ dealerId, vehicleId, type, filename, contentType }) {
+  if (!gcs.enabled || !gcs.bucket) throw new Error("GCS signing disabled");
   if (!["image", "video"].includes(type)) throw new Error("type must be image or video");
+
   const safeName = sanitizeFilename(filename);
   const folder = type === "image" ? "images/original" : "videos/original";
   const objectKey = `dealers/${dealerId}/vehicles/${vehicleId}/${folder}/${Date.now()}_${safeName}`;
 
-  const file = bucket.file(objectKey);
+  const file = gcs.bucket.file(objectKey);
   const [url] = await file.getSignedUrl({
     version: "v4",
     action: "write",
@@ -609,7 +633,6 @@ app.get("/api/public/config", (_req, res) => {
       uploadPreset: CLOUDINARY_UPLOAD_PRESET,
       baseFolder: CLOUDINARY_BASE_FOLDER,
     },
-    // If you ever want to expose other non-secret config, do it here.
   });
 });
 
@@ -789,6 +812,10 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
       return res.status(400).json({ ok: false, error: "make and model required" });
     }
 
+    // Normalize + basic validation: only keep URL-like strings
+    if (vehicle.heroImage && !/^https?:\/\//i.test(vehicle.heroImage)) vehicle.heroImage = "";
+    vehicle.images = (vehicle.images || []).filter((u) => typeof u === "string" && /^https?:\/\//i.test(u));
+
     const saved = await dealerUpsertVehicle(sheets, dealerId, vehicle);
     res.json({ ok: true, vehicle: saved });
   } catch (e) {
@@ -897,6 +924,13 @@ app.post("/api/public/leads", async (req, res) => {
 
 // ---------- 404 ----------
 app.use((_req, res) => res.status(404).send("Not Found"));
+
+// ---------- Error handler (logs stacks into Cloud Run logs) ----------
+app.use((err, req, res, _next) => {
+  console.error("[ERR]", req.method, req.path, err && err.stack ? err.stack : err);
+  if (res.headersSent) return;
+  res.status(500).json({ ok: false, error: "Internal Server Error" });
+});
 
 // ---------- Start server (Cloud Run expects 0.0.0.0 and PORT) ----------
 app.listen(PORT, "0.0.0.0", () => {
