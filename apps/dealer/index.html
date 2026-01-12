@@ -562,36 +562,6 @@
         <textarea class="textarea" id="vNotes" placeholder="Financing, trade-ins, condition, etc."></textarea>
       </div>
 
-      <div class="row three">
-        <div class="field">
-          <div class="label"><span>Mileage (km)</span><span>Optional</span></div>
-          <input class="input" id="vMileage" type="number" placeholder="45000">
-        </div>
-        <div class="field">
-          <div class="label"><span>Transmission</span><span>Optional</span></div>
-          <input class="input" id="vTransmission" placeholder="Automatic">
-        </div>
-        <div class="field">
-          <div class="label"><span>Fuel type</span><span>Optional</span></div>
-          <input class="input" id="vFuelType" placeholder="Gasoline">
-        </div>
-      </div>
-
-      <div class="row three">
-        <div class="field">
-          <div class="label"><span>Body type</span><span>Optional</span></div>
-          <input class="input" id="vBodyType" placeholder="Sedan">
-        </div>
-        <div class="field">
-          <div class="label"><span>Color</span><span>Optional</span></div>
-          <input class="input" id="vColor" placeholder="White">
-        </div>
-        <div class="field">
-          <div class="label"><span>VIN</span><span>Optional</span></div>
-          <input class="input" id="vVin" placeholder="JH4KA8260MC000000">
-        </div>
-      </div>
-
       <div class="card" style="margin-top:12px">
         <h3>Photos</h3>
         <div class="hint">Upload up to 7 images. Set the hero image for storefront display.</div>
@@ -697,12 +667,6 @@
     vPrice: el("vPrice"),
     vTitle: el("vTitle"),
     vNotes: el("vNotes"),
-    vMileage: el("vMileage"),
-    vTransmission: el("vTransmission"),
-    vFuelType: el("vFuelType"),
-    vBodyType: el("vBodyType"),
-    vColor: el("vColor"),
-    vVin: el("vVin"),
 
     files: el("files"),
     galleryGrid: el("galleryGrid"),
@@ -1191,12 +1155,6 @@
     ui.vPrice.value = v?.price || "";
     ui.vTitle.value = v?.title || "";
     ui.vNotes.value = v?.notes || "";
-    ui.vMileage.value = v?.mileage ?? "";
-    ui.vTransmission.value = v?.transmission || "";
-    ui.vFuelType.value = v?.fuelType || "";
-    ui.vBodyType.value = v?.bodyType || "";
-    ui.vColor.value = v?.color || "";
-    ui.vVin.value = v?.vin || "";
     ui.files.value = "";
     ui.replaceFile.value = "";
     state.replacingIndex = null;
@@ -1343,6 +1301,10 @@
       setMStatus("Make + Model are required.", true);
       return;
     }
+    if(!CLOUD.cloudName){
+      setMStatus("Media storage is not configured. Contact support.", true);
+      return;
+    }
     if(!state.demo && !state.token){
       setMStatus("Not logged in.", true);
       return;
@@ -1448,12 +1410,6 @@
       price: num(ui.vPrice.value),
       title: (ui.vTitle.value || "").trim(),
       notes: (ui.vNotes.value || "").trim(),
-      mileage: numOrNull(ui.vMileage.value),
-      transmission: (ui.vTransmission.value || "").trim(),
-      fuelType: (ui.vFuelType.value || "").trim(),
-      bodyType: (ui.vBodyType.value || "").trim(),
-      color: (ui.vColor.value || "").trim(),
-      vin: (ui.vVin.value || "").trim(),
       images: Array.isArray(state.editing?.images) ? state.editing.images : [],
       heroImage: (state.editing?.heroImage || "")
     };

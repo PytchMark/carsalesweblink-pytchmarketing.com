@@ -1336,7 +1336,7 @@ app.post("/api/public/leads", async (req, res) => {
     const dealerId = String(body.dealerId || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
     }
 
     const lead = {

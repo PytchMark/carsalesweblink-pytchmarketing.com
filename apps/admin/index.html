@@ -1581,6 +1581,11 @@
         ui.mStatus.classList.add("error");
         return;
       }
+      if(payload.passcode && !/^\d{6}$/.test(payload.passcode)){
+        ui.mStatus.textContent = "Passcode must be exactly 6 digits.";
+        ui.mStatus.classList.add("error");
+        return;
+      }
 
       ui.mStatus.textContent = "Saving…";
       ui.mStatus.classList.remove("error");
