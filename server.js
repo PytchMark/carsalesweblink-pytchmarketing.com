@@ -917,7 +917,6 @@ app.get("/api/public/config", async (_req, res) => {
     const settings = await getSettings(sheets);
     res.json({
       ok: true,
-      dealerId: DEFAULT_DEALER_ID ? normalizeDealerId(DEFAULT_DEALER_ID) : "",
       cloudinary: {
         cloudName: CLOUDINARY_CLOUD_NAME,
         uploadPreset: CLOUDINARY_UPLOAD_PRESET, // optional fallback only
@@ -1163,7 +1162,7 @@ app.post("/api/dealer/login", async (req, res) => {
     }
 
     const sheets = await getSheetsClient();
-    const normalized = normalizeDealerId(resolvedDealerId);
+    const normalized = normalizeDealerId(dealerId);
     const dealer = await adminGetDealer(sheets, normalized);
     if (!dealer) return res.status(401).json({ ok: false, error: "Invalid credentials" });
 
@@ -1316,7 +1315,7 @@ app.get("/api/public/vehicles", async (req, res) => {
       return res.status(400).json({ error: "dealerId must be two letters followed by 3-5 numbers" });
     }
 
-    const normalized = normalizeDealerId(resolvedDealerId);
+    const normalized = normalizeDealerId(dealerId);
     const vehicles = await dealerListVehicles(sheets, normalized);
     return res.json({ vehicles: filterPublicVehicles(vehicles) });
   } catch (e) {
@@ -1365,7 +1364,7 @@ app.post("/api/public/leads", async (req, res) => {
     const dealerId = String(body.dealerId || DEFAULT_DEALER_ID || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
     }
 
     const lead = {
