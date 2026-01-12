@@ -8,16 +8,19 @@
 // ✅ Fixes included:
 // 1) Auto-expands dealer tabs so A2000:L2000 DOES NOT exceed grid limits
 // 2) Fix passcode hash parsing (supports both "$$" and legacy "$" formats)
-// 3) Adds /api/public/config to expose Cloudinary env config to dealer UI
+// 3) Adds /api/public/config to expose Cloudinary env config to frontends
 // 4) Adds small request logger for /api/* errors (helps debugging Cloud Run)
 // 5) Adds an error-handler to log stack traces in Cloud Run logs
 // 6) Makes GCS signing optional (won't crash if bucket perms are missing and you don't use it)
+// 7) Adds SIGNED Cloudinary upload signer: POST /api/dealer/cloudinary/sign
+// 8) OPTIONAL: Cloudinary folder listing endpoint (server-side Admin API) if ENABLE_CLOUDINARY_LIST=true
 
 "use strict";
 
 const express = require("express");
 const path = require("path");
 const crypto = require("crypto");
+const https = require("https");
 
 // Google APIs
 const { google } = require("googleapis");
@@ -25,7 +28,6 @@ const { google } = require("googleapis");
 // GCS (optional/back-compat)
 let Storage;
 try {
-  // Allow running even if @google-cloud/storage isn't installed (local/dev)
   ({ Storage } = require("@google-cloud/storage"));
 } catch {
   Storage = null;
@@ -41,28 +43,32 @@ const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || "adminpytch");
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "123456");
 
 const JWT_SECRET = String(process.env.JWT_SECRET || "dev-secret-change-me");
-const GOOGLE_SHEET_ID = String(process.env.GOOGLE_SHEET_ID || ""); // REQUIRED for sheets features
+const GOOGLE_SHEET_ID = String(process.env.GOOGLE_SHEET_ID || "");
 
 // GCS settings (optional)
 const MEDIA_BUCKET = String(process.env.MEDIA_BUCKET || "samplemedia1");
 const GCS_PUBLIC_BASE = String(process.env.GCS_PUBLIC_BASE || "https://storage.googleapis.com");
 
-// Cloudinary (for dealer uploads - client-side unsigned preset)
+// Cloudinary
 const CLOUDINARY_CLOUD_NAME = String(process.env.CLOUDINARY_CLOUD_NAME || "");
-const CLOUDINARY_UPLOAD_PRESET = String(process.env.CLOUDINARY_UPLOAD_PRESET || "");
+const CLOUDINARY_UPLOAD_PRESET = String(process.env.CLOUDINARY_UPLOAD_PRESET || ""); // optional fallback
 const CLOUDINARY_BASE_FOLDER = String(process.env.CLOUDINARY_BASE_FOLDER || "mediaexclusive");
 
-// Dealer sheet layout
-const DEALER_LEADS_START_ROW = Number(process.env.DEALER_LEADS_START_ROW || 2000); // leads far below vehicles
-const ADMIN_SHEET_TITLE = String(process.env.ADMIN_SHEET_TITLE || "ADMIN");
+// Signed Cloudinary uploads (recommended)
+const CLOUDINARY_API_KEY = String(process.env.CLOUDINARY_API_KEY || "");
+const CLOUDINARY_API_SECRET = String(process.env.CLOUDINARY_API_SECRET || "");
 
-// When creating dealer tabs, ensure enough rows so we can safely write leads headers at row 2000
+// Optional: allow server-side folder listing
+const ENABLE_CLOUDINARY_LIST = String(process.env.ENABLE_CLOUDINARY_LIST || "").toLowerCase() === "true";
+
+// Dealer sheet layout
+const DEALER_LEADS_START_ROW = Number(process.env.DEALER_LEADS_START_ROW || 2000);
+const ADMIN_SHEET_TITLE = String(process.env.ADMIN_SHEET_TITLE || "ADMIN");
 const DEALER_MIN_ROWS = Number(process.env.DEALER_MIN_ROWS || Math.max(1200, DEALER_LEADS_START_ROW + 300));
 
 // ---------- Middleware ----------
 app.disable("x-powered-by");
 
-// Avoid Chrome/Accept-CH weirdness
 app.use((req, res, next) => {
   res.removeHeader("Accept-CH");
   res.removeHeader("Critical-CH");
@@ -86,16 +92,14 @@ app.use((req, res, next) => {
 // Serve static files from repo root
 app.use(express.static(ROOT, { extensions: ["html"] }));
 
-// ---------- Static routing (works with/without trailing slash) ----------
+// ---------- Static routing ----------
 function serveAppIndex(appName) {
   return (_req, res) => res.sendFile(path.join(ROOT, "apps", appName, "index.html"));
 }
-
 app.get("/", serveAppIndex("storefront"));
 app.get(["/storefront", "/storefront/"], serveAppIndex("storefront"));
 app.get(["/dealer", "/dealer/"], serveAppIndex("dealer"));
 app.get(["/admin", "/admin/"], serveAppIndex("admin"));
-
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ---------- JWT (no external deps) ----------
@@ -106,7 +110,6 @@ function base64url(buf) {
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
 }
-
 function signJwt(payload, expiresInSeconds) {
   const header = { alg: "HS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
@@ -119,7 +122,6 @@ function signJwt(payload, expiresInSeconds) {
   const sig = crypto.createHmac("sha256", JWT_SECRET).update(data).digest();
   return `${data}.${base64url(sig)}`;
 }
-
 function verifyJwt(token) {
   const parts = String(token || "").split(".");
   if (parts.length !== 3) throw new Error("bad token");
@@ -132,14 +134,12 @@ function verifyJwt(token) {
   if (payload.exp && now > payload.exp) throw new Error("expired");
   return payload;
 }
-
 function timingSafeEqual(a, b) {
   const aa = Buffer.from(String(a));
   const bb = Buffer.from(String(b));
   if (aa.length !== bb.length) return false;
   return crypto.timingSafeEqual(aa, bb);
 }
-
 function requireAuth(req, res, next) {
   const token = (req.headers.authorization || "").replace("Bearer ", "").trim();
   if (!token) return res.status(401).json({ ok: false, error: "Missing token" });
@@ -150,12 +150,10 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ ok: false, error: "Invalid token" });
   }
 }
-
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== "admin") return res.status(403).json({ ok: false, error: "Forbidden" });
   next();
 }
-
 function requireDealer(req, res, next) {
   if (!req.user || req.user.role !== "dealer") return res.status(403).json({ ok: false, error: "Forbidden" });
   next();
@@ -165,34 +163,24 @@ function requireDealer(req, res, next) {
 function hashPasscode(passcode, salt) {
   const s = salt || crypto.randomBytes(16).toString("hex");
   const hash = crypto.pbkdf2Sync(String(passcode), s, 120000, 32, "sha256").toString("hex");
-  // Prefer "$$" delimiter to avoid ambiguous split; verifier supports multiple formats.
   return `${s}$$${hash}`;
 }
-
 function parseStoredHash(stored) {
   const v = String(stored || "");
-
-  // Preferred format: salt$$hash
   if (v.includes("$$")) {
     const parts = v.split("$$");
     if (parts.length === 2) return { salt: parts[0], hash: parts[1] };
   }
-
-  // Legacy: salt$hash OR salt$<empty>$hash
   if (v.includes("$")) {
     const parts = v.split("$").filter((x) => x !== "");
     if (parts.length >= 2) return { salt: parts[0], hash: parts[1] };
   }
-
-  // Alternative: salt:hash
   if (v.includes(":")) {
     const parts = v.split(":");
     if (parts.length === 2) return { salt: parts[0], hash: parts[1] };
   }
-
   return null;
 }
-
 function verifyPasscode(passcode, stored) {
   const parsed = parseStoredHash(stored);
   if (!parsed) return false;
@@ -200,28 +188,52 @@ function verifyPasscode(passcode, stored) {
   return timingSafeEqual(test, parsed.hash);
 }
 
+// ---------- Helpers ----------
 function gen6() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
-
 function nowIso() {
   return new Date().toISOString();
 }
-
 function safeDealerTabName(dealerId) {
-  // sheet tab titles: avoid slashes/brackets, keep short
   return String(dealerId || "")
     .trim()
     .replace(/[^\w\- ]+/g, "_")
     .slice(0, 80);
 }
-
 function digitsOnly(s) {
   return String(s || "").replace(/\D+/g, "");
 }
-
 function makeVehicleId() {
   return "VEH-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+function safeParseJsonArray(v) {
+  try {
+    const x = JSON.parse(v || "[]");
+    return Array.isArray(x) ? x : [];
+  } catch {
+    return [];
+  }
+}
+function publicDealer(d) {
+  return {
+    dealerId: d.dealerId,
+    name: d.name,
+    status: d.status,
+    whatsapp: d.whatsapp,
+    logoUrl: d.logoUrl,
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
+  };
+}
+function filterPublicVehicles(list) {
+  return (list || []).filter((v) => {
+    const s = String(v.status || "").toLowerCase();
+    return ["published", "available", "in_stock", "instock"].includes(s);
+  });
+}
+function isHttpUrl(u) {
+  return typeof u === "string" && /^https?:\/\//i.test(u);
 }
 
 // ---------- Google Sheets client ----------
@@ -233,7 +245,6 @@ async function getSheetsClient() {
   const client = await auth.getClient();
   return google.sheets({ version: "v4", auth: client });
 }
-
 async function getSpreadsheetMeta(sheets) {
   const meta = await sheets.spreadsheets.get({
     spreadsheetId: GOOGLE_SHEET_ID,
@@ -244,7 +255,6 @@ async function getSpreadsheetMeta(sheets) {
   for (const t of tabs) byTitle.set(t.properties.title, t.properties);
   return { tabs, byTitle };
 }
-
 async function ensureRows(sheets, sheetId, neededRowCount) {
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: GOOGLE_SHEET_ID,
@@ -260,7 +270,6 @@ async function ensureRows(sheets, sheetId, neededRowCount) {
     },
   });
 }
-
 async function ensureTab(sheets, title, minRows = 1000) {
   const meta = await getSpreadsheetMeta(sheets);
 
@@ -292,7 +301,6 @@ async function ensureTab(sheets, title, minRows = 1000) {
 
   return props2;
 }
-
 async function ensureAdminSheet(sheets) {
   await ensureTab(sheets, ADMIN_SHEET_TITLE, 200);
 
@@ -310,14 +318,12 @@ async function ensureAdminSheet(sheets) {
     });
   }
 }
-
 async function ensureDealerTabLayout(sheets, dealerId) {
   const title = safeDealerTabName(dealerId);
 
   // ✅ ensure enough rows for A2000:L2000
   await ensureTab(sheets, title, DEALER_MIN_ROWS);
 
-  // Vehicles header row at A1:K1
   const vehHeaders = [
     "vehicleId",
     "title",
@@ -344,7 +350,6 @@ async function ensureDealerTabLayout(sheets, dealerId) {
     });
   }
 
-  // Leads header row far below
   const leadHeaders = [
     "createdAt",
     "leadId",
@@ -374,7 +379,6 @@ async function ensureDealerTabLayout(sheets, dealerId) {
     });
   }
 }
-
 async function adminListDealers(sheets) {
   await ensureAdminSheet(sheets);
   const range = `${ADMIN_SHEET_TITLE}!A2:H`;
@@ -391,7 +395,6 @@ async function adminListDealers(sheets) {
     updatedAt: r[7] || "",
   }));
 }
-
 async function adminUpsertDealer(sheets, dealer) {
   await ensureAdminSheet(sheets);
 
@@ -418,7 +421,7 @@ async function adminUpsertDealer(sheets, dealer) {
       requestBody: { values: [rowValues] },
     });
   } else {
-    const rowNum = idx + 2; // header row + 1-based
+    const rowNum = idx + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId: GOOGLE_SHEET_ID,
       range: `${ADMIN_SHEET_TITLE}!A${rowNum}:H${rowNum}`,
@@ -427,22 +430,10 @@ async function adminUpsertDealer(sheets, dealer) {
     });
   }
 }
-
 async function adminGetDealer(sheets, dealerId) {
   const dealers = await adminListDealers(sheets);
   return dealers.find((d) => d.dealerId === dealerId) || null;
 }
-
-function safeParseJsonArray(v) {
-  try {
-    const x = JSON.parse(v || "[]");
-    return Array.isArray(x) ? x : [];
-  } catch {
-    return [];
-  }
-}
-
-// Vehicles live at top (A2:K...)
 async function dealerListVehicles(sheets, dealerId) {
   const tab = safeDealerTabName(dealerId);
   await ensureDealerTabLayout(sheets, dealerId);
@@ -467,7 +458,6 @@ async function dealerListVehicles(sheets, dealerId) {
       dealerId,
     }));
 }
-
 async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   const tab = safeDealerTabName(dealerId);
   await ensureDealerTabLayout(sheets, dealerId);
@@ -479,7 +469,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   let foundRowNum = -1;
   for (let i = 0; i < rows.length; i++) {
     if ((rows[i][0] || "").trim() === vehicle.vehicleId) {
-      foundRowNum = i + 2; // A2 is row 2
+      foundRowNum = i + 2;
       break;
     }
   }
@@ -518,7 +508,6 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
 
   return { ...vehicle, updatedAt, dealerId };
 }
-
 async function dealerAppendLead(sheets, dealerId, lead) {
   const tab = safeDealerTabName(dealerId);
   await ensureDealerTabLayout(sheets, dealerId);
@@ -543,7 +532,6 @@ async function dealerAppendLead(sheets, dealerId, lead) {
     ],
   ];
 
-  // Append starting after lead header row (startRow+1)
   const appendRange = `${tab}!A${DEALER_LEADS_START_ROW + 1}:L`;
   await sheets.spreadsheets.values.append({
     spreadsheetId: GOOGLE_SHEET_ID,
@@ -578,7 +566,6 @@ if (Storage) {
 function sanitizeFilename(name) {
   return String(name || "file").replace(/[^\w.\-]+/g, "_").slice(0, 140);
 }
-
 async function signUpload({ dealerId, vehicleId, type, filename, contentType }) {
   if (!gcs.enabled || !gcs.bucket) throw new Error("GCS signing disabled");
   if (!["image", "video"].includes(type)) throw new Error("type must be image or video");
@@ -591,7 +578,7 @@ async function signUpload({ dealerId, vehicleId, type, filename, contentType }) 
   const [url] = await file.getSignedUrl({
     version: "v4",
     action: "write",
-    expires: Date.now() + 10 * 60 * 1000, // 10 minutes
+    expires: Date.now() + 10 * 60 * 1000,
     contentType,
   });
 
@@ -599,38 +586,146 @@ async function signUpload({ dealerId, vehicleId, type, filename, contentType }) 
   return { url, objectKey, publicUrl };
 }
 
-// ---------- Helpers ----------
-function publicDealer(d) {
-  return {
-    dealerId: d.dealerId,
-    name: d.name,
-    status: d.status,
-    whatsapp: d.whatsapp,
-    logoUrl: d.logoUrl,
-    createdAt: d.createdAt,
-    updatedAt: d.updatedAt,
-  };
+// =========================
+// Cloudinary: SIGNED upload signature endpoint
+// =========================
+
+// Cloudinary signature rules: sign a sorted param string, append api_secret, sha1 hex.
+// We only sign what we need: folder + timestamp (you can add more later if you want).
+function cloudinarySignature(params, apiSecret) {
+  const keys = Object.keys(params).filter((k) => params[k] !== undefined && params[k] !== null && params[k] !== "");
+  keys.sort();
+  const toSign = keys.map((k) => `${k}=${params[k]}`).join("&") + apiSecret;
+  return crypto.createHash("sha1").update(toSign).digest("hex");
 }
 
-function filterPublicVehicles(list) {
-  return (list || []).filter((v) => {
-    const s = String(v.status || "").toLowerCase();
-    // storefront shows vehicles that are basically "for sale"
-    return ["published", "available", "in_stock", "instock"].includes(s);
+// Dealer-only signer
+app.post("/api/dealer/cloudinary/sign", requireAuth, requireDealer, async (req, res) => {
+  try {
+    if (!CLOUDINARY_CLOUD_NAME) return res.status(400).json({ ok: false, error: "CLOUDINARY_CLOUD_NAME missing" });
+    if (!CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+      return res.status(400).json({ ok: false, error: "CLOUDINARY_API_KEY/SECRET missing (required for signed uploads)" });
+    }
+
+    const body = req.body || {};
+    const folder = String(body.folder || "").trim();
+
+    if (!folder) return res.status(400).json({ ok: false, error: "folder required" });
+
+    // simple safety: enforce uploads under your base folder
+    if (CLOUDINARY_BASE_FOLDER && !folder.startsWith(CLOUDINARY_BASE_FOLDER)) {
+      return res.status(400).json({ ok: false, error: "folder must be under CLOUDINARY_BASE_FOLDER" });
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    const signature = cloudinarySignature(
+      {
+        folder,
+        timestamp,
+      },
+      CLOUDINARY_API_SECRET
+    );
+
+    return res.json({
+      ok: true,
+      mode: "signed",
+      apiKey: CLOUDINARY_API_KEY,
+      timestamp,
+      signature,
+      folder,
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e?.message || "Failed to sign Cloudinary upload" });
+  }
+});
+
+// =========================
+// OPTIONAL: Cloudinary folder listing (Admin API)
+// =========================
+
+function httpsJson({ hostname, path, method, headers }) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      { hostname, path, method: method || "GET", headers: headers || {} },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => {
+          const json = (() => {
+            try { return JSON.parse(data || "{}"); } catch { return null; }
+          })();
+          if (res.statusCode >= 200 && res.statusCode < 300) return resolve(json);
+          const msg = json?.error?.message || `Cloudinary API error (${res.statusCode})`;
+          reject(new Error(msg));
+        });
+      }
+    );
+    req.on("error", reject);
+    req.end();
   });
 }
+
+// Public listing endpoint (use only if ENABLE_CLOUDINARY_LIST=true)
+app.get("/api/public/cloudinary/list", async (req, res) => {
+  try {
+    if (!ENABLE_CLOUDINARY_LIST) return res.status(404).send("Not Found");
+    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+      return res.status(400).json({ ok: false, error: "Cloudinary admin creds missing" });
+    }
+
+    // You can list per dealer, or per vehicle
+    const dealerId = String(req.query.dealerId || "").trim();
+    const vehicleId = String(req.query.vehicleId || "").trim();
+    const cursor = String(req.query.cursor || "").trim();
+    const maxResults = Math.min(100, Math.max(1, Number(req.query.limit || 50)));
+
+    if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
+
+    let prefix = `${CLOUDINARY_BASE_FOLDER}/dealers/${dealerId}`;
+    if (vehicleId) prefix = `${prefix}/vehicles/${vehicleId}`;
+
+    const auth = Buffer.from(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`).toString("base64");
+
+    // Admin API: list image resources by prefix
+    // GET /v1_1/<cloud>/resources/image/upload?prefix=...&max_results=...&next_cursor=...
+    const qs = new URLSearchParams();
+    qs.set("prefix", prefix);
+    qs.set("max_results", String(maxResults));
+    if (cursor) qs.set("next_cursor", cursor);
+
+    const json = await httpsJson({
+      hostname: "api.cloudinary.com",
+      path: `/v1_1/${encodeURIComponent(CLOUDINARY_CLOUD_NAME)}/resources/image/upload?${qs.toString()}`,
+      method: "GET",
+      headers: { Authorization: `Basic ${auth}` },
+    });
+
+    const resources = Array.isArray(json?.resources) ? json.resources : [];
+    const urls = resources.map((r) => r.secure_url).filter(Boolean);
+
+    res.json({
+      ok: true,
+      prefix,
+      urls,
+      nextCursor: json?.next_cursor || "",
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to list Cloudinary folder" });
+  }
+});
 
 // =========================
 // API ROUTES
 // =========================
 
-// ----- PUBLIC CONFIG (Cloudinary env exposure for frontends) -----
+// PUBLIC CONFIG
 app.get("/api/public/config", (_req, res) => {
   res.json({
     ok: true,
     cloudinary: {
       cloudName: CLOUDINARY_CLOUD_NAME,
-      uploadPreset: CLOUDINARY_UPLOAD_PRESET,
+      uploadPreset: CLOUDINARY_UPLOAD_PRESET, // optional fallback only
       baseFolder: CLOUDINARY_BASE_FOLDER,
     },
   });
@@ -752,7 +847,6 @@ app.get("/api/admin/inventory", requireAuth, requireAdmin, async (_req, res) => 
 });
 
 app.get("/api/admin/requests", requireAuth, requireAdmin, async (_req, res) => {
-  // Keep v1 light; stored per dealer tab. UI won't break.
   res.json({ ok: true, requests: [] });
 });
 
@@ -812,9 +906,12 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
       return res.status(400).json({ ok: false, error: "make and model required" });
     }
 
-    // Normalize + basic validation: only keep URL-like strings
-    if (vehicle.heroImage && !/^https?:\/\//i.test(vehicle.heroImage)) vehicle.heroImage = "";
-    vehicle.images = (vehicle.images || []).filter((u) => typeof u === "string" && /^https?:\/\//i.test(u));
+    // Keep only URL-like strings
+    if (vehicle.heroImage && !isHttpUrl(vehicle.heroImage)) vehicle.heroImage = "";
+    vehicle.images = (vehicle.images || []).filter(isHttpUrl);
+
+    // Auto-hero: if hero missing but images exist
+    if (!vehicle.heroImage && vehicle.images.length) vehicle.heroImage = vehicle.images[0];
 
     const saved = await dealerUpsertVehicle(sheets, dealerId, vehicle);
     res.json({ ok: true, vehicle: saved });
@@ -831,7 +928,6 @@ app.post("/api/dealer/uploads/sign", requireAuth, requireDealer, async (req, res
     if (!vehicleId || !type || !filename || !contentType) {
       return res.status(400).json({ ok: false, error: "vehicleId, type, filename, contentType required" });
     }
-
     const out = await signUpload({ dealerId, vehicleId, type, filename, contentType });
     res.json({ ok: true, ...out });
   } catch (e) {
@@ -845,7 +941,6 @@ app.post("/api/dealers/:dealerId/vehicles/:vehicleId/uploads/sign", requireAuth,
     const dealerId = req.params.dealerId;
     const vehicleId = req.params.vehicleId;
 
-    // allow admin or the same dealer
     if (req.user?.role === "dealer" && req.user.dealerId !== dealerId) {
       return res.status(403).json({ ok: false, error: "Forbidden" });
     }
@@ -866,6 +961,7 @@ app.post("/api/dealers/:dealerId/vehicles/:vehicleId/uploads/sign", requireAuth,
 });
 
 // ----- PUBLIC (Storefront) -----
+// ✅ Storefront reads URLs stored in Sheets (Cloudinary secure_url).
 app.get("/api/public/vehicles", async (req, res) => {
   try {
     const { dealerId } = req.query || {};
@@ -925,25 +1021,26 @@ app.post("/api/public/leads", async (req, res) => {
 // ---------- 404 ----------
 app.use((_req, res) => res.status(404).send("Not Found"));
 
-// ---------- Error handler (logs stacks into Cloud Run logs) ----------
+// ---------- Error handler ----------
 app.use((err, req, res, _next) => {
   console.error("[ERR]", req.method, req.path, err && err.stack ? err.stack : err);
   if (res.headersSent) return;
   res.status(500).json({ ok: false, error: "Internal Server Error" });
 });
 
-// ---------- Start server (Cloud Run expects 0.0.0.0 and PORT) ----------
+// ---------- Start server ----------
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`carsalesweblink running on :${PORT}`);
   console.log(`GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID ? "set" : "missing"}`);
   console.log(`DEALER_LEADS_START_ROW=${DEALER_LEADS_START_ROW}`);
   console.log(`DEALER_MIN_ROWS=${DEALER_MIN_ROWS}`);
 
-  // Cloudinary config visibility (safe)
   console.log(`CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME ? "set" : "missing"}`);
-  console.log(`CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET ? "set" : "missing"}`);
   console.log(`CLOUDINARY_BASE_FOLDER=${CLOUDINARY_BASE_FOLDER}`);
+  console.log(`CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET ? "set" : "missing (ok)"} (unsigned fallback only)`);
+  console.log(`CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY ? "set" : "missing"} (signed uploads)`);
+  console.log(`CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET ? "set" : "missing"} (signed uploads)`);
+  console.log(`ENABLE_CLOUDINARY_LIST=${ENABLE_CLOUDINARY_LIST}`);
 
-  // GCS info (optional)
-  console.log(`MEDIA_BUCKET=${MEDIA_BUCKET}`);
+  console.log(`MEDIA_BUCKET=${MEDIA_BUCKET} (optional)`);
 });
