@@ -244,6 +244,7 @@
       color: var(--muted);
       box-shadow: var(--shadow2);
       display:inline-flex;align-items:center;gap:6px;
+      z-index: 2;
     }
     .tag .miniDot{
       width:7px;height:7px;border-radius:99px;background: var(--brand);
@@ -419,6 +420,7 @@
             <span id="dealerPill">Dealer: All</span>
           </div>
           <button class="btn btn-ghost" id="btnRefresh" type="button">Refresh</button>
+          <a class="btn btn-ghost" href="/dealer">Dealer portal</a>
         </div>
       </header>
 
@@ -583,6 +585,7 @@
     // --------- State ----------
     let allVehicles = [];
     let filtered = [];
+    let cloudCfg = { cloudName:"", baseFolder:"" };
 
     let booking = {
       dealerId: "",
@@ -598,6 +601,7 @@
       return "J$ " + x.toLocaleString();
     }
     function norm(s){ return String(s || "").trim().toLowerCase(); }
+    function isHttpUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
 
     function showToast(msg, ok=true){
       const t = qs("toast");
@@ -615,10 +619,7 @@
       const d = u.searchParams.get("dealerId") || "";
       const vehicleId = u.searchParams.get("vehicleId") || "";
       if (d) qs("fDealer").value = d;
-      if (vehicleId) {
-        // if a vehicleId is present, we’ll filter down after load
-        qs("fSearch").value = vehicleId;
-      }
+      if (vehicleId) qs("fSearch").value = vehicleId;
     }
 
     function setLoadingSkeleton(){
@@ -656,6 +657,18 @@
       qs("countMeta").textContent = "…";
     }
 
+    // --------- Load config (optional) ----------
+    async function loadConfig(){
+      try{
+        const res = await fetch("/api/public/config", { headers:{ "Accept":"application/json" }});
+        const data = await res.json().catch(()=>null);
+        cloudCfg.cloudName = data?.cloudinary?.cloudName || "";
+        cloudCfg.baseFolder = data?.cloudinary?.baseFolder || "";
+      }catch{
+        cloudCfg = { cloudName:"", baseFolder:"" };
+      }
+    }
+
     // --------- Fetch inventory ----------
     async function loadInventory(){
       const dealerId = qs("fDealer").value.trim();
@@ -668,8 +681,8 @@
 
       try{
         const res = await fetch(url.toString(), { headers: { "Accept":"application/json" }});
-        const data = await res.json();
-        allVehicles = (data && data.vehicles) ? data.vehicles : [];
+        const data = await res.json().catch(()=>null);
+        allVehicles = (data && Array.isArray(data.vehicles)) ? data.vehicles : [];
         buildFilterOptions(allVehicles);
         applyFilters();
       }catch(e){
@@ -779,25 +792,52 @@
         qs("kRange").textContent = "J$ " + min.toLocaleString() + " → " + "J$ " + max.toLocaleString();
       }
 
-      // suggestive copy
       if (!list.length) qs("kTip").textContent = "Try clearing filters or searching by make/model.";
       else qs("kTip").textContent = "Want a quick look? Use “Video viewing” and we’ll walk you through it.";
     }
 
-    // --------- Media helper ----------
+    // --------- Media helper (Cloudinary URLs in Sheets) ----------
+    // The NEW server returns:
+    //   v.heroImage: "https://res.cloudinary.com/.../image/upload/..."
+    //   v.images: ["https://res.cloudinary.com/..."]
+    // We still tolerate old shapes just in case.
     function pickHeroUrl(v){
-      // supported shapes:
-      // v.media.images = [{publicUrl: "..."}] OR ["..."]
-      // v.heroImageUrl = "..."
-      if (v.heroImageUrl) return String(v.heroImageUrl);
+      const hero = v?.heroImage || v?.heroImageUrl || "";
+      if (isHttpUrl(hero)) return hero;
+
+      const images = Array.isArray(v?.images) ? v.images : [];
+      const first = images.find(isHttpUrl);
+      if (first) return first;
+
+      // Back-compat: v.media.images = [{publicUrl}] or ["..."]
       const imgs = v?.media?.images;
       if (Array.isArray(imgs) && imgs.length){
-        const first = imgs[0];
-        if (typeof first === "string") return first;
-        if (first && first.publicUrl) return first.publicUrl;
-        if (first && first.url) return first.url;
+        const x = imgs[0];
+        if (typeof x === "string" && isHttpUrl(x)) return x;
+        if (x && isHttpUrl(x.publicUrl)) return x.publicUrl;
+        if (x && isHttpUrl(x.url)) return x.url;
       }
       return "";
+    }
+
+    // Optional: Cloudinary transform for faster thumbnails.
+    // Works best with Cloudinary URLs; if it’s not Cloudinary, we return the original.
+    function thumb(url){
+      try{
+        if (!isHttpUrl(url)) return "";
+        // Only transform Cloudinary URLs
+        if (!/res\.cloudinary\.com\/[^/]+\/image\/upload\//i.test(url)) return url;
+
+        // Insert transformation after /upload/
+        // (keep it simple: auto format + quality + fill crop)
+        return url.replace(/\/image\/upload\//i, "/image/upload/f_auto,q_auto,c_fill,w_900,h_520/");
+      }catch{
+        return url;
+      }
+    }
+
+    function deriveTitle(v){
+      return v.title || [v.year, v.make, v.model].filter(Boolean).join(" ") || "Vehicle";
     }
 
     // --------- Render cards ----------
@@ -805,11 +845,10 @@
       const grid = qs("grid");
       grid.innerHTML = "";
       qs("countMeta").textContent = String(list.length);
-
       qs("empty").style.display = list.length ? "none" : "block";
 
       list.forEach(v=>{
-        const title = v.title || [v.year, v.make, v.model].filter(Boolean).join(" ") || "Vehicle";
+        const title = deriveTitle(v);
         const dealerId = v.dealerId || "unknown";
         const vehicleId = v.vehicleId || "unknown";
         const status = String(v.status||"").toLowerCase();
@@ -830,10 +869,15 @@
           const img = document.createElement("img");
           img.alt = title;
           img.loading = "lazy";
-          img.src = hero;
+          img.src = thumb(hero);
+          img.referrerPolicy = "no-referrer";
+          img.onerror = () => {
+            // if transformed url fails, fall back to original
+            if (img.src !== hero) img.src = hero;
+          };
           media.appendChild(img);
         } else {
-          media.appendChild(document.createTextNode("Gallery will appear here"));
+          media.appendChild(document.createTextNode("Photos coming soon"));
         }
 
         const c = document.createElement("div");
@@ -859,8 +903,11 @@
         price.textContent = money(v.price);
 
         const st = document.createElement("div");
-        st.className = "status " + (status==="published" ? "published" : "");
-        st.textContent = status==="published" ? "IN STOCK" : (v.status || "Draft");
+        st.className = "status " + ((status==="published" || status==="available" || status==="in_stock" || status==="instock") ? "published" : "");
+        st.textContent =
+          (status==="published" || status==="available" || status==="in_stock" || status==="instock")
+            ? "IN STOCK"
+            : (v.status || "Draft");
 
         pr.appendChild(price);
         pr.appendChild(st);
@@ -904,7 +951,6 @@
         c.appendChild(meta);
         c.appendChild(pr);
 
-        // subtle microcopy line (looks “expensive” and improves conversion)
         const micro = document.createElement("div");
         micro.className = "meta";
         micro.style.fontSize = "11.5px";
@@ -963,13 +1009,12 @@
       qs("mStatus").textContent = "Sending request…";
 
       try{
-        // expects: POST /api/public/leads
         const res = await fetch("/api/public/leads", {
           method:"POST",
           headers:{ "Content-Type":"application/json" },
           body: JSON.stringify(payload)
         });
-        const data = await res.json();
+        const data = await res.json().catch(()=>null);
 
         if (!res.ok){
           qs("mStatus").textContent = data?.error || "Could not send request.";
@@ -1011,8 +1056,11 @@
     qs("mSubmit").onclick = submitBooking;
 
     // Boot
-    parseDealerFromUrl();
-    loadInventory();
+    (async ()=>{
+      parseDealerFromUrl();
+      await loadConfig(); // not strictly required; kept for future enhancements
+      loadInventory();
+    })();
   </script>
 </body>
 </html>
