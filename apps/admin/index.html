@@ -408,7 +408,6 @@
         </div>
         <div class="actions">
           <a class="btn btn-ghost" href="/">← Storefront</a>
-          <!-- ✅ FIXED: server routes dealer at /dealer (not /apps/dealer) -->
           <a class="btn btn-ghost" href="/dealer">Dealer ↗</a>
         </div>
       </div>
@@ -416,8 +415,7 @@
       <div class="panel">
         <h3>Sign in</h3>
         <div class="hint">
-          Test credentials are controlled by <span class="mono">Cloud Run env vars</span>
-          (<span class="mono">ADMIN_USERNAME</span> / <span class="mono">ADMIN_PASSWORD</span>).
+          Use your admin credentials to access dealer management, inventory oversight, and storefront controls.
         </div>
 
         <div class="row two" style="margin-top:10px">
@@ -569,15 +567,14 @@
             </div>
           </div>
 
-          <!-- System Info (updated to Cloudinary-first) -->
+          <!-- System Info -->
           <div class="panel" style="margin-top:10px">
-            <h3>System</h3>
+            <h3>Platform storage</h3>
             <div class="hint">
-              Cloudinary cloud: <span class="mono" id="cloudName">(loading)</span><br/>
+              Media cloud: <span class="mono" id="cloudName">(loading)</span><br/>
               Base folder: <span class="mono" id="cloudFolder">(loading)</span><br/>
-              Upload path: <span class="mono">dealers/{dealerId}/vehicles/{vehicleId}/</span><br/>
-              Leads path (Sheets): <span class="mono">{dealerTab}!A{startRow}</span><br/>
-              <span style="color:var(--muted2)">GCS signing is optional/back-compat (MEDIA_BUCKET) if enabled.</span>
+              File structure: <span class="mono">dealers/{dealerId}/vehicles/{vehicleId}/</span><br/>
+              Leads are stored per dealer, keeping requests organized.
             </div>
           </div>
         </div>
@@ -600,6 +597,27 @@
               <tbody id="tbody"></tbody>
             </table>
           </div>
+        </div>
+
+        <div class="panel hidden" id="settingsPanel">
+          <h3>Storefront design</h3>
+          <div class="hint">Set the global brand assets shown across every dealer storefront.</div>
+
+          <div class="field">
+            <div class="label"><span>Main logo URL</span><span>Displayed in storefront header</span></div>
+            <input id="settingLogoUrl" class="input" placeholder="https://..." />
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Hero video URL</span><span>Optional homepage highlight</span></div>
+            <input id="settingHeroVideoUrl" class="input" placeholder="https://..." />
+          </div>
+
+          <div class="splitBtns" style="justify-content:flex-start">
+            <button class="btn btn-primary" id="btnSaveSettings" type="button">Save storefront settings</button>
+          </div>
+
+          <div class="statusline" id="settingsStatus"></div>
         </div>
 
         <div class="panel hidden" id="dealerViewPanel">
@@ -736,16 +754,19 @@
 
         <div class="panel" style="margin-top:10px">
           <h3>Security</h3>
-          <div class="hint">Reset generates a fresh passcode for the dealer (server controls the real value).</div>
+          <div class="hint">View or update the dealer passcode. Changes take effect immediately.</div>
 
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top:8px">
-            <div class="pill" title="Current passcode (only shown in demo mode)" style="box-shadow:none">
-              <span class="dot on" style="box-shadow:none"></span>
-              <span>Passcode: <span class="mono" id="mPasscode">••••••</span></span>
+          <div class="row two" style="margin-top:8px">
+            <div class="field">
+              <div class="label"><span>Passcode</span><span>6 digits</span></div>
+              <input id="mPasscodeInput" class="input mono" inputmode="numeric" maxlength="6" placeholder="••••••" />
             </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap">
-              <button class="btn btn-danger" id="btnResetPasscode" type="button">Reset passcode</button>
-              <button class="btn btn-primary" id="btnSaveDealer" type="button">Save changes</button>
+            <div class="field">
+              <div class="label"><span>Actions</span></div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap">
+                <button class="btn btn-danger" id="btnResetPasscode" type="button">Generate new</button>
+                <button class="btn btn-primary" id="btnSaveDealer" type="button">Save changes</button>
+              </div>
             </div>
           </div>
 
@@ -785,6 +806,7 @@
       dealerLeads: (dealerId) => `/api/admin/dealer/${encodeURIComponent(dealerId)}/leads`,
       dealerLeadStatus: (dealerId) => `/api/admin/dealer/${encodeURIComponent(dealerId)}/leads/status`,
       publicConfig: () => "/api/public/config",
+      settings: () => "/api/admin/settings",
     };
 
     const el = (id) => document.getElementById(id);
@@ -845,6 +867,11 @@
       dealerActionStatus: el("dealerActionStatus"),
 
       mainTable: el("mainTable"),
+      settingsPanel: el("settingsPanel"),
+      settingLogoUrl: el("settingLogoUrl"),
+      settingHeroVideoUrl: el("settingHeroVideoUrl"),
+      btnSaveSettings: el("btnSaveSettings"),
+      settingsStatus: el("settingsStatus"),
       dealerViewPanel: el("dealerViewPanel"),
       dealerViewHint: el("dealerViewHint"),
       dkInventory: el("dkInventory"),
@@ -869,7 +896,7 @@
       mDealerStatus: el("mDealerStatus"),
       mDealerWhatsApp: el("mDealerWhatsApp"),
       mDealerLogo: el("mDealerLogo"),
-      mPasscode: el("mPasscode"),
+      mPasscodeInput: el("mPasscodeInput"),
       btnResetPasscode: el("btnResetPasscode"),
       btnSaveDealer: el("btnSaveDealer"),
       mStatus: el("mStatus"),
@@ -899,6 +926,10 @@
 
       config: {
         cloudinary: { cloudName:"", baseFolder:"", uploadPreset:"" }
+      },
+      settings: {
+        storefrontLogoUrl: "",
+        storefrontHeroVideoUrl: ""
       }
     };
 
@@ -939,6 +970,7 @@
 
       ui.btnResetPasscode.addEventListener("click", resetPasscode);
       ui.btnSaveDealer.addEventListener("click", saveDealerChanges);
+      ui.btnSaveSettings.addEventListener("click", saveSettings);
 
       ui.dealerSelect.addEventListener("change", () => loadDealerView());
       ui.dealerRange.addEventListener("change", () => {
@@ -967,6 +999,63 @@
     function paintSystemPanel(){
       ui.cloudName.textContent = state.config.cloudinary.cloudName || "missing";
       ui.cloudFolder.textContent = state.config.cloudinary.baseFolder || "mediaexclusive";
+    }
+
+    function paintSettingsForm(){
+      ui.settingLogoUrl.value = state.settings.storefrontLogoUrl || "";
+      ui.settingHeroVideoUrl.value = state.settings.storefrontHeroVideoUrl || "";
+    }
+
+    async function loadSettings(){
+      ui.settingsStatus.textContent = "";
+      ui.settingsStatus.classList.remove("error");
+      if(!state.apiOnline){
+        paintSettingsForm();
+        return;
+      }
+      try{
+        const res = await fetch(API.settings(), { headers: authHeaders() });
+        const data = await safeJson(res);
+        if(!res.ok || !data?.ok) throw new Error(data?.error || "Failed to load settings");
+        state.settings = data.settings || state.settings;
+        paintSettingsForm();
+      }catch(e){
+        ui.settingsStatus.textContent = "Could not load settings.";
+        ui.settingsStatus.classList.add("error");
+      }
+    }
+
+    async function saveSettings(){
+      ui.settingsStatus.textContent = "Saving…";
+      ui.settingsStatus.classList.remove("error");
+
+      const settings = {
+        storefrontLogoUrl: (ui.settingLogoUrl.value || "").trim(),
+        storefrontHeroVideoUrl: (ui.settingHeroVideoUrl.value || "").trim(),
+      };
+
+      try{
+        if(!state.apiOnline){
+          state.settings = { ...state.settings, ...settings };
+          ui.settingsStatus.textContent = "Saved (demo).";
+          toast("Settings updated.", "success");
+          return;
+        }
+        const res = await fetch(API.settings(), {
+          method:"POST",
+          headers:{ ...authHeaders(), "Content-Type":"application/json", "Accept":"application/json" },
+          body: JSON.stringify({ settings })
+        });
+        const data = await safeJson(res);
+        if(!res.ok || !data?.ok) throw new Error(data?.error || "Save failed");
+        state.settings = data.settings || settings;
+        ui.settingsStatus.textContent = "Settings saved.";
+        toast("Settings updated.", "success");
+      }catch(e){
+        ui.settingsStatus.textContent = "Failed to save settings.";
+        ui.settingsStatus.classList.add("error");
+        toast("Save failed: " + (e?.message||"error"), "error");
+      }
     }
 
     async function doLogin(){
@@ -1038,16 +1127,22 @@
           loadDealerView();
           return;
         }
+        if(state.tab === "settings"){
+          paintSettingsForm();
+        }
         render();
         return;
       }
 
       try{
-        if(state.tab === "dealers" || state.tab === "settings" || state.tab === "dealerView"){
+        if(state.tab === "dealers" || state.tab === "dealerView"){
           const res = await fetch(API.dealers(), { headers: authHeaders() });
           const data = await safeJson(res);
           if(!res.ok || !data?.ok) throw new Error(data?.error || "Failed to load dealers");
           state.dealers = Array.isArray(data.dealers) ? data.dealers : [];
+        }
+        if(state.tab === "settings"){
+          await loadSettings();
         }
         if(state.tab === "inventory"){
           const res = await fetch(API.inventory(), { headers: authHeaders() });
@@ -1097,12 +1192,13 @@
         : tab==="inventory" ? "Search across all dealers. Verify status and listing quality."
         : tab==="requests" ? "Monitor incoming leads. Promote from New → Booked → Closed."
         : tab==="dealerView" ? "Choose a dealer to view KPIs, inventory, and leads."
-        : "Review environment-driven settings and shortcuts.";
+        : "Update storefront branding and shared media.";
 
       ui.dealerActions.classList.toggle("hidden", tab!=="dealers");
       ui.dealerViewControls.classList.toggle("hidden", tab!=="dealerView");
-      ui.mainTable.classList.toggle("hidden", tab==="dealerView");
+      ui.mainTable.classList.toggle("hidden", tab==="dealerView" || tab==="settings");
       ui.dealerViewPanel.classList.toggle("hidden", tab!=="dealerView");
+      ui.settingsPanel.classList.toggle("hidden", tab!=="settings");
 
       buildStatusFilterOptions(tab);
       buildTableHeaders(tab);
@@ -1165,10 +1261,12 @@
         renderDealerView();
         return;
       }
+      if(state.tab==="settings"){
+        return;
+      }
       if(state.tab==="dealers") rows = [...state.dealers];
       if(state.tab==="inventory") rows = [...state.vehicles];
       if(state.tab==="requests") rows = [...state.requests];
-      if(state.tab==="settings") rows = settingsRows();
 
       if(q){
         rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
@@ -1232,20 +1330,6 @@
 
         ui.tbody.appendChild(tr);
       });
-    }
-
-    function settingsRows(){
-      const c = state.config.cloudinary || {};
-      return [
-        { item:"CLOUDINARY_CLOUD_NAME", value:(c.cloudName || "(missing)"), hint:"Dealer uploads + storefront images", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set CLOUDINARY_CLOUD_NAME in Cloud Run.', 'success')">How to change</button>` },
-        { item:"CLOUDINARY_UPLOAD_PRESET", value:(c.uploadPreset ? "(set)" : "(missing)"), hint:"Unsigned preset for dealer uploads", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set CLOUDINARY_UPLOAD_PRESET in Cloud Run.', 'success')">How to change</button>` },
-        { item:"CLOUDINARY_BASE_FOLDER", value:(c.baseFolder || "mediaexclusive"), hint:"Base folder for uploads", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set CLOUDINARY_BASE_FOLDER in Cloud Run.', 'success')">How to change</button>` },
-        { item:"GOOGLE_SHEET_ID", value:"(server)", hint:"Main spreadsheet for dealer tabs", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Set GOOGLE_SHEET_ID in Cloud Run.', 'success')">How to change</button>` },
-        { item:"ADMIN_USERNAME", value:"(server)", hint:"Admin login username", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Change ADMIN_USERNAME in Cloud Run.', 'success')">How to change</button>` },
-        { item:"ADMIN_PASSWORD", value:"(server)", hint:"Admin login password", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Change ADMIN_PASSWORD in Cloud Run.', 'success')">How to change</button>` },
-        { item:"JWT_SECRET", value:"(server)", hint:"Signs login tokens", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Keep JWT_SECRET long + private.', 'success')">Best practice</button>` },
-        { item:"MEDIA_BUCKET (optional)", value:"(server)", hint:"Only used for GCS signed uploads (back-compat)", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Only needed if you still use GCS signed uploads.', 'success')">When needed</button>` },
-      ];
     }
 
     function populateDealerSelect(){
@@ -1445,7 +1529,7 @@
     function openDealerModal(dealer){
       state.selectedDealer = { ...dealer };
       ui.mTitle.textContent = "Dealer editor";
-      ui.mSub.textContent = "Edit dealer profile and reset passcode.";
+      ui.mSub.textContent = "Update dealer profile, branding, and passcode.";
       ui.mStatus.textContent = "";
 
       ui.mDealerName.value = dealer.name || "";
@@ -1455,7 +1539,7 @@
       ui.mDealerLogo.value = dealer.logoUrl || dealer.logo || "";
 
       const demoPass = state.demoPasscodes[dealer.dealerId];
-      ui.mPasscode.textContent = demoPass ? demoPass : "••••••";
+      ui.mPasscodeInput.value = demoPass || dealer.passcode || "";
 
       ui.dealerBackdrop.classList.add("show");
       ui.dealerBackdrop.setAttribute("aria-hidden","false");
@@ -1471,12 +1555,16 @@
       if(!state.selectedDealer) return;
 
       const payload = {
-        dealerId: (ui.mDealerId.value||"").trim(),
+        dealerId: (ui.mDealerId.value||"").trim().toUpperCase(),
         name: (ui.mDealerName.value||"").trim(),
         status: (ui.mDealerStatus.value||"active").toLowerCase(),
         whatsapp: digits(ui.mDealerWhatsApp.value||""),
         logoUrl: (ui.mDealerLogo.value||"").trim(),
       };
+      const passcode = (ui.mPasscodeInput.value||"").trim();
+      if(passcode){
+        payload.passcode = passcode;
+      }
 
       if(!payload.dealerId || !payload.name){
         ui.mStatus.textContent = "Dealer ID and name are required.";
@@ -1488,6 +1576,11 @@
         ui.mStatus.classList.add("error");
         return;
       }
+      if(payload.passcode && !/^\d{6}$/.test(payload.passcode)){
+        ui.mStatus.textContent = "Passcode must be exactly 6 digits.";
+        ui.mStatus.classList.add("error");
+        return;
+      }
 
       ui.mStatus.textContent = "Saving…";
       ui.mStatus.classList.remove("error");
@@ -1496,7 +1589,7 @@
         if(!state.apiOnline){
           const idx = state.dealers.findIndex(d => d.dealerId === state.selectedDealer.dealerId);
           if(idx>-1){
-            state.dealers[idx] = { ...state.dealers[idx], ...payload };
+            state.dealers[idx] = { ...state.dealers[idx], ...payload, passcode: payload.passcode || state.dealers[idx].passcode };
           }
           ui.mStatus.textContent = "Saved (demo).";
           toast("Dealer updated.", "success");
@@ -1514,6 +1607,7 @@
 
         ui.mStatus.textContent = "Saved.";
         toast("Dealer updated.", "success");
+        if(data.passcode) ui.mPasscodeInput.value = String(data.passcode);
         await refresh();
       }catch(e){
         ui.mStatus.textContent = "Failed to save.";
@@ -1534,7 +1628,7 @@
         if(!state.apiOnline){
           const newPass = String(Math.floor(100000 + Math.random()*900000));
           state.demoPasscodes[dealerId] = newPass;
-          ui.mPasscode.textContent = newPass;
+          ui.mPasscodeInput.value = newPass;
           ui.mStatus.textContent = "Passcode reset (demo).";
           toast("Passcode reset.", "success");
           return;
@@ -1548,7 +1642,7 @@
         const data = await safeJson(res);
         if(!res.ok || !data?.ok) throw new Error(data?.error || "Reset failed");
 
-        if(data.passcode) ui.mPasscode.textContent = String(data.passcode);
+        if(data.passcode) ui.mPasscodeInput.value = String(data.passcode);
 
         ui.mStatus.textContent = "Passcode reset.";
         toast("Passcode reset.", "success");
@@ -1566,7 +1660,7 @@
     async function createDealer(){
       const payload = {
         name: (ui.newDealerName.value||"").trim(),
-        dealerId: (ui.newDealerId.value||"").trim(),
+        dealerId: (ui.newDealerId.value||"").trim().toUpperCase(),
         status: (ui.newDealerStatus.value||"active").toLowerCase(),
         whatsapp: digits(ui.newDealerWhatsApp.value||""),
         logoUrl: (ui.newDealerLogo.value||"").trim(),
@@ -1600,6 +1694,7 @@
             status: payload.status,
             whatsapp: payload.whatsapp,
             logoUrl: payload.logoUrl,
+            passcode: pass,
             vehicleCount: 0
           });
 

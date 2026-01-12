@@ -285,7 +285,7 @@
         <div class="logo">D</div>
         <div>
           <div class="title" id="topTitle">Dealer Portal</div>
-          <div class="sub" id="topSub">Log in to manage inventory + photos.</div>
+          <div class="sub" id="topSub">Manage inventory, pricing, and media in one place.</div>
         </div>
       </div>
       <div class="actions">
@@ -327,9 +327,8 @@
         <div class="card">
           <h3>Photo storage</h3>
           <div class="hint">
-            Photos upload to <b>Cloudinary</b>. We first request a <span class="mono">signed upload</span> from your server
-            (recommended), upload files, then save each <span class="mono">secure_url</span> into Google Sheets for the storefront.<br>
-            <span style="opacity:.85">If the signed endpoint isn’t set up yet, this UI can automatically fall back to unsigned preset uploads.</span>
+            Photos are stored securely in the shared media library. Once saved, they appear on the storefront instantly.
+            If uploads pause, check your connection or contact support.
           </div>
           <div class="statusline" id="cfgLine"></div>
         </div>
@@ -508,7 +507,7 @@
     <div class="mhead">
       <div>
         <h3 id="mTitle">Add vehicle</h3>
-        <div class="sub" id="mSub">Save to Sheets + upload photos to Cloudinary.</div>
+        <div class="sub" id="mSub">Save vehicle details and upload photos.</div>
       </div>
       <button class="xbtn" id="mClose" type="button" aria-label="Close">×</button>
     </div>
@@ -558,11 +557,6 @@
       <div class="field">
         <div class="label"><span>Notes</span><span>Shown to customers</span></div>
         <textarea class="textarea" id="vNotes" placeholder="Financing, trade-ins, condition, etc."></textarea>
-      </div>
-
-      <div class="field">
-        <div class="label"><span>Hero video URL</span><span>Optional</span></div>
-        <input class="input" id="vHeroVideo" placeholder="https://..." />
       </div>
 
       <div class="card" style="margin-top:12px">
@@ -670,7 +664,6 @@
     vPrice: el("vPrice"),
     vTitle: el("vTitle"),
     vNotes: el("vNotes"),
-    vHeroVideo: el("vHeroVideo"),
 
     files: el("files"),
     galleryGrid: el("galleryGrid"),
@@ -752,16 +745,16 @@
       CLOUD.baseFolder = data.cloudinary?.baseFolder || "mediaexclusive";
 
       if(!CLOUD.cloudName){
-        ui.cfgLine.textContent = "Cloudinary config missing. Set CLOUDINARY_CLOUD_NAME on Cloud Run.";
+        ui.cfgLine.textContent = "Media storage is not configured. Please contact support.";
         ui.cfgLine.classList.add("error");
       } else if(!CLOUD.uploadPreset){
         // Signed uploads don't require upload preset, but fallback unsigned does.
-        ui.cfgLine.textContent = `Cloudinary ready: ${CLOUD.cloudName} · folder: ${CLOUD.baseFolder} (upload preset missing — signed uploads required)`;
+        ui.cfgLine.textContent = `Media storage connected · folder: ${CLOUD.baseFolder}`;
       } else {
-        ui.cfgLine.textContent = `Cloudinary ready: ${CLOUD.cloudName} · folder: ${CLOUD.baseFolder}`;
+        ui.cfgLine.textContent = `Media storage connected · folder: ${CLOUD.baseFolder}`;
       }
     }catch{
-      ui.cfgLine.textContent = "Could not load Cloudinary config from server.";
+      ui.cfgLine.textContent = "Unable to verify media storage. Please refresh or contact support.";
       ui.cfgLine.classList.add("error");
     }
   }
@@ -784,7 +777,7 @@
   }
 
   async function doLogin(){
-    const dealerId = (ui.dealerId.value || "").trim();
+    const dealerId = (ui.dealerId.value || "").trim().toUpperCase();
     const passcode = (ui.passcode.value || "").trim();
     if(!dealerId || !passcode){
       setLoginStatus("Enter Dealer ID + passcode.", true);
@@ -1159,7 +1152,6 @@
     ui.vPrice.value = v?.price || "";
     ui.vTitle.value = v?.title || "";
     ui.vNotes.value = v?.notes || "";
-    ui.vHeroVideo.value = v?.heroVideo || "";
     ui.files.value = "";
     ui.replaceFile.value = "";
     state.replacingIndex = null;
@@ -1167,8 +1159,7 @@
     if(!state.editing){
       state.editing = {
         images: [],
-        heroImage: "",
-        heroVideo: ""
+        heroImage: ""
       };
     }
     if(!Array.isArray(state.editing.images)) state.editing.images = [];
@@ -1308,7 +1299,7 @@
       return;
     }
     if(!CLOUD.cloudName){
-      setMStatus("Cloudinary config missing (CLOUDINARY_CLOUD_NAME).", true);
+      setMStatus("Media storage is not configured. Contact support.", true);
       return;
     }
     if(!state.demo && !state.token){
@@ -1340,7 +1331,6 @@
         notes: payload.notes,
         images: existingImages,
         heroImage: payload.heroImage || "",
-        heroVideo: payload.heroVideo || "",
       });
 
       let uploadedUrls = [];
@@ -1374,8 +1364,7 @@
         status: payload.status,
         notes: payload.notes,
         images: mergedImages,
-        heroImage: heroImage,
-        heroVideo: payload.heroVideo || ""
+        heroImage: heroImage
       });
 
       state.editing.images = mergedImages;
@@ -1402,7 +1391,6 @@
       price: num(ui.vPrice.value),
       title: (ui.vTitle.value || "").trim(),
       notes: (ui.vNotes.value || "").trim(),
-      heroVideo: (ui.vHeroVideo.value || "").trim(),
       images: Array.isArray(state.editing?.images) ? state.editing.images : [],
       heroImage: (state.editing?.heroImage || "")
     };
@@ -1448,7 +1436,7 @@
   async function getCloudinarySigner(vehicleId){
     // If we've already decided signed endpoint isn't there, skip trying again.
     if(state.unsignedFallback){
-      if(!CLOUD.uploadPreset) throw new Error("Unsigned upload preset missing (CLOUDINARY_UPLOAD_PRESET).");
+      if(!CLOUD.uploadPreset) throw new Error("Standard upload preset is missing. Contact support.");
       return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder: makeFolder(vehicleId) };
     }
 
@@ -1473,9 +1461,9 @@
       if(res.status === 404){
         state.unsignedFallback = true;
         if(!CLOUD.uploadPreset) {
-          throw new Error("Signed upload endpoint not found, and CLOUDINARY_UPLOAD_PRESET is missing for fallback.");
+          throw new Error("Secure upload is unavailable and standard upload is not configured.");
         }
-        ui.uploadLine.textContent = "Signed endpoint not found — falling back to unsigned preset upload.";
+        ui.uploadLine.textContent = "Secure upload unavailable — using standard upload.";
         return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder };
       }
 
@@ -1501,7 +1489,7 @@
       // Fallback to unsigned preset if possible
       if(CLOUD.uploadPreset){
         state.unsignedFallback = true;
-        ui.uploadLine.textContent = "Signed upload failed — using unsigned preset fallback.";
+        ui.uploadLine.textContent = "Secure upload failed — using standard upload.";
         return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder: makeFolder(vehicleId) };
       }
       // If no fallback, bubble error
@@ -1601,7 +1589,6 @@
       status: (v.status || "available").toLowerCase(),
       notes: v.notes || "",
       heroImage: v.heroImage || "",
-      heroVideo: v.heroVideo || "",
       images: Array.isArray(v.images) ? v.images : [],
       updatedAt: v.updatedAt || v.createdAt || new Date().toISOString(),
       createdAt: v.createdAt || v.updatedAt || new Date().toISOString()
