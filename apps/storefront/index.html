@@ -347,6 +347,7 @@
 
     .title{font-size:14px;font-weight:900;line-height:1.2}
     .meta{font-size:12px;color: var(--muted)}
+    .specs{font-size:12px;color: var(--muted)}
 
     .priceRow{
       display:flex;justify-content:space-between;align-items:flex-end;gap:8px;
@@ -567,10 +568,10 @@
           <div class="title">Enter a dealer ID to view inventory</div>
           <div class="hint">Use the format: <strong>AA123</strong> (two letters + three numbers).</div>
         </div>
-        <div class="group">
-          <input class="input" id="dealerInput" placeholder="AA123" maxlength="5" />
-          <button class="btn btn-sm" id="btnDealerGo" type="button">Load dealer</button>
-          <button class="btn btn-ghost btn-sm" id="btnDealerClear" type="button">Clear</button>
+        <div class="hero-copy">
+          <div class="eyebrow">Main showroom</div>
+          <h2 id="heroTitle">Find the right vehicle, faster.</h2>
+          <p id="heroSub">Select a dealer to see real-time availability, compare options, and request a viewing in minutes.</p>
         </div>
       </section>
 
@@ -655,8 +656,8 @@
 
       <section>
         <div id="invalidLink" class="errorState" style="display:none">
-          <div style="font-weight:850;color:var(--ink);margin-bottom:6px">Enter a dealer ID to view inventory</div>
-          Once you enter a valid dealer ID (AA123), vehicles for that dealer will appear here.
+          <div style="font-weight:850;color:var(--ink);margin-bottom:6px">Inventory is not connected yet</div>
+          This storefront needs a dealer profile and spreadsheet connection to load vehicles.
         </div>
         <div id="grid" class="grid"></div>
         <div id="empty" class="empty" style="display:none">

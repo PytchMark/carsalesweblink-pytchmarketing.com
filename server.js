@@ -44,6 +44,11 @@ const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "123456");
 
 const JWT_SECRET = String(process.env.JWT_SECRET || "dev-secret-change-me");
 const GOOGLE_SHEET_ID = String(process.env.GOOGLE_SHEET_ID || "");
+const DEFAULT_DEALER_ID = String(process.env.DEALER_ID || process.env.DEFAULT_DEALER_ID || "").trim();
+const DEALER_PASSCODE = String(process.env.DEALER_PASSCODE || "").trim();
+const DEALER_NAME = String(process.env.DEALER_NAME || "").trim();
+const DEALER_LOGO_URL = String(process.env.DEALER_LOGO_URL || "").trim();
+const DEALER_WHATSAPP = String(process.env.DEALER_WHATSAPP || "").trim();
 
 // GCS settings (optional)
 const MEDIA_BUCKET = String(process.env.MEDIA_BUCKET || "samplemedia1");
@@ -211,7 +216,7 @@ function digitsOnly(s) {
   return String(s || "").replace(/\D+/g, "");
 }
 function isValidDealerId(dealerId) {
-  return /^[A-Za-z]{2}\d{3}$/.test(String(dealerId || "").trim());
+  return /^[A-Za-z]{2}\d{3,5}$/.test(String(dealerId || "").trim());
 }
 function makeVehicleId() {
   return "VEH-" + crypto.randomBytes(3).toString("hex").toUpperCase();
@@ -357,9 +362,15 @@ async function ensureDealerTabLayout(sheets, dealerId) {
     "heroVideo",
     "imagesJson",
     "updatedAt",
+    "mileage",
+    "transmission",
+    "fuelType",
+    "bodyType",
+    "color",
+    "vin",
   ];
 
-  const vehRange = `${title}!A1:L1`;
+  const vehRange = `${title}!A1:R1`;
   const existingVeh = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: vehRange });
   const rowVeh = (existingVeh.data.values && existingVeh.data.values[0]) || [];
   if (rowVeh.join("|") !== vehHeaders.join("|")) {
@@ -533,13 +544,13 @@ async function dealerListVehicles(sheets, dealerId) {
   const tab = safeDealerTabName(normalized);
   await ensureDealerTabLayout(sheets, normalized);
 
-  const range = `${tab}!A2:L`;
+  const range = `${tab}!A2:R`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
   const rows = res.data.values || [];
   return rows
     .filter((r) => (r[0] || "").trim())
     .map((r) => ({
-      ...(r.length >= 12
+      ...(r.length >= 18
         ? {
             vehicleId: r[0] || "",
             title: r[1] || "",
@@ -553,6 +564,12 @@ async function dealerListVehicles(sheets, dealerId) {
             heroVideo: r[9] || "",
             images: safeParseJsonArray(r[10]),
             updatedAt: r[11] || "",
+            mileage: r[12] ? Number(r[12]) : null,
+            transmission: r[13] || "",
+            fuelType: r[14] || "",
+            bodyType: r[15] || "",
+            color: r[16] || "",
+            vin: r[17] || "",
           }
         : {
             vehicleId: r[0] || "",
@@ -567,6 +584,12 @@ async function dealerListVehicles(sheets, dealerId) {
             heroVideo: "",
             images: safeParseJsonArray(r[9]),
             updatedAt: r[10] || "",
+            mileage: null,
+            transmission: "",
+            fuelType: "",
+            bodyType: "",
+            color: "",
+            vin: "",
           }),
       dealerId,
     }));
@@ -576,7 +599,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   const tab = safeDealerTabName(normalized);
   await ensureDealerTabLayout(sheets, normalized);
 
-  const range = `${tab}!A2:L`;
+  const range = `${tab}!A2:R`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
   const rows = res.data.values || [];
 
@@ -602,12 +625,18 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
     vehicle.heroVideo || "",
     JSON.stringify(vehicle.images || []),
     updatedAt,
+    vehicle.mileage != null && vehicle.mileage !== "" ? String(vehicle.mileage) : "",
+    vehicle.transmission || "",
+    vehicle.fuelType || "",
+    vehicle.bodyType || "",
+    vehicle.color || "",
+    vehicle.vin || "",
   ];
 
   if (foundRowNum === -1) {
     await sheets.spreadsheets.values.append({
       spreadsheetId: GOOGLE_SHEET_ID,
-      range: `${tab}!A:L`,
+      range: `${tab}!A:R`,
       valueInputOption: "RAW",
       insertDataOption: "INSERT_ROWS",
       requestBody: { values: [rowValues] },
@@ -615,7 +644,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   } else {
     await sheets.spreadsheets.values.update({
       spreadsheetId: GOOGLE_SHEET_ID,
-      range: `${tab}!A${foundRowNum}:L${foundRowNum}`,
+      range: `${tab}!A${foundRowNum}:R${foundRowNum}`,
       valueInputOption: "RAW",
       requestBody: { values: [rowValues] },
     });
@@ -961,7 +990,7 @@ app.post("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
     const { dealerId, name, status, whatsapp, logoUrl } = req.body || {};
     if (!dealerId || !name) return res.status(400).json({ ok: false, error: "dealerId and name required" });
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
     }
 
     const sheets = await getSheetsClient();
@@ -1002,7 +1031,7 @@ app.post("/api/admin/reset-passcode", requireAuth, requireAdmin, async (req, res
     const { dealerId } = req.body || {};
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
     }
 
     const sheets = await getSheetsClient();
@@ -1068,7 +1097,7 @@ app.get("/api/admin/dealer/:dealerId/vehicles", requireAuth, requireAdmin, async
     const dealerId = String(req.params.dealerId || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
     }
     const sheets = await getSheetsClient();
     const vehicles = await dealerListVehicles(sheets, normalizeDealerId(dealerId));
@@ -1083,7 +1112,7 @@ app.get("/api/admin/dealer/:dealerId/leads", requireAuth, requireAdmin, async (r
     const dealerId = String(req.params.dealerId || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
     }
     const sheets = await getSheetsClient();
     const leads = await dealerListLeads(sheets, normalizeDealerId(dealerId));
@@ -1101,7 +1130,7 @@ app.post("/api/admin/dealer/:dealerId/leads/status", requireAuth, requireAdmin, 
       return res.status(400).json({ ok: false, error: "dealerId, leadId, status required" });
     }
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
     }
     const sheets = await getSheetsClient();
     const updated = await dealerUpdateLeadStatus(sheets, normalizeDealerId(dealerId), String(leadId), String(status));
@@ -1116,9 +1145,20 @@ app.post("/api/admin/dealer/:dealerId/leads/status", requireAuth, requireAdmin, 
 app.post("/api/dealer/login", async (req, res) => {
   try {
     const { dealerId, passcode } = req.body || {};
-    if (!dealerId || !passcode) return res.status(400).json({ ok: false, error: "dealerId and passcode required" });
-    if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
+    if (!passcode) return res.status(400).json({ ok: false, error: "passcode required" });
+    const resolvedDealerId = String(dealerId || DEFAULT_DEALER_ID || "").trim();
+    if (!resolvedDealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
+    if (!isValidDealerId(resolvedDealerId)) {
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
+    }
+
+    if (DEALER_PASSCODE) {
+      if (!timingSafeEqual(passcode, DEALER_PASSCODE)) {
+        return res.status(401).json({ ok: false, error: "Invalid credentials" });
+      }
+      const normalized = normalizeDealerId(resolvedDealerId);
+      const token = signJwt({ role: "dealer", dealerId: normalized }, 8 * 3600);
+      return res.json({ ok: true, token, dealerName: DEALER_NAME || normalized, dealerId: normalized });
     }
 
     const sheets = await getSheetsClient();
@@ -1166,6 +1206,12 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
       price: body.price != null && body.price !== "" ? Number(body.price) : 0,
       status: String(body.status || "available").trim(),
       notes: String(body.notes || "").trim(),
+      mileage: body.mileage != null && body.mileage !== "" ? Number(body.mileage) : null,
+      transmission: String(body.transmission || "").trim(),
+      fuelType: String(body.fuelType || "").trim(),
+      bodyType: String(body.bodyType || "").trim(),
+      color: String(body.color || "").trim(),
+      vin: String(body.vin || "").trim(),
       heroImage: String(body.heroImage || "").trim(),
       heroVideo: String(body.heroVideo || "").trim(),
       images: Array.isArray(body.images) ? body.images : [],
@@ -1261,11 +1307,12 @@ app.get("/api/public/vehicles", async (req, res) => {
     const { dealerId } = req.query || {};
     const sheets = await getSheetsClient();
 
-    if (!dealerId) {
+    const resolvedDealerId = String(dealerId || DEFAULT_DEALER_ID || "").trim();
+    if (!resolvedDealerId) {
       return res.status(400).json({ error: "dealerId required" });
     }
-    if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ error: "dealerId must be two letters followed by three numbers" });
+    if (!isValidDealerId(resolvedDealerId)) {
+      return res.status(400).json({ error: "dealerId must be two letters followed by 3-5 numbers" });
     }
 
     const normalized = normalizeDealerId(dealerId);
@@ -1278,10 +1325,21 @@ app.get("/api/public/vehicles", async (req, res) => {
 
 app.get("/api/public/dealer", async (req, res) => {
   try {
-    const dealerId = String(req.query.dealerId || "").trim();
+    const dealerId = String(req.query.dealerId || DEFAULT_DEALER_ID || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
-      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
+      return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by 3-5 numbers" });
+    }
+    if (DEALER_NAME || DEALER_LOGO_URL || DEALER_WHATSAPP) {
+      return res.json({
+        ok: true,
+        dealer: {
+          dealerId: normalizeDealerId(dealerId),
+          name: DEALER_NAME || "Dealer",
+          logoUrl: DEALER_LOGO_URL,
+          whatsapp: digitsOnly(DEALER_WHATSAPP),
+        },
+      });
     }
     const sheets = await getSheetsClient();
     const dealer = await adminGetDealer(sheets, normalizeDealerId(dealerId));
@@ -1303,7 +1361,7 @@ app.get("/api/public/dealer", async (req, res) => {
 app.post("/api/public/leads", async (req, res) => {
   try {
     const body = req.body || {};
-    const dealerId = String(body.dealerId || "").trim();
+    const dealerId = String(body.dealerId || DEFAULT_DEALER_ID || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });

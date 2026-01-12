@@ -1,609 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Carsales – Dealer</title>
-  <style>
-    :root{
-      --bg:#f6f7fb;
-      --surface:#ffffff;
-      --surface2:#fbfbfd;
-      --ink:#0f172a;
-      --muted:#64748b;
-      --muted2:#94a3b8;
-      --line:#e5e7eb;
-      --shadow:0 18px 40px rgba(15, 23, 42, 0.12);
-      --shadow2:0 10px 24px rgba(15, 23, 42, 0.08);
-      --brand:#dc2626;
-      --brand2:#ef4444;
-      --good:#16a34a;
-      --warn:#f59e0b;
-      --bad:#ef4444;
-      --radius:18px;
-      --sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      color:var(--ink);
-      background:
-        radial-gradient(circle at top left, rgba(220,38,38,.08), transparent 45%),
-        radial-gradient(circle at bottom right, rgba(239,68,68,.06), transparent 55%),
-        var(--bg);
-      -webkit-font-smoothing:antialiased;
-    }
-    a{color:inherit;text-decoration:none}
-    .hidden{display:none!important}
-
-    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
-    .shell{
-      width:100%;
-      max-width:1180px;
-      background: rgba(255,255,255,.92);
-      border:1px solid var(--line);
-      border-radius:28px;
-      box-shadow: var(--shadow);
-      overflow:hidden;
-      backdrop-filter: blur(10px);
-    }
-
-    .top{
-      display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
-      padding:16px 18px;
-      border-bottom:1px solid var(--line);
-      background: linear-gradient(90deg, rgba(255,255,255,.96), rgba(255,255,255,.92));
-    }
-    .brand{display:flex;align-items:center;gap:10px}
-    .logo{
-      width:44px;height:44px;border-radius:14px;
-      display:grid;place-items:center;
-      background: radial-gradient(circle at 20% 20%, #fff, #fee2e2 55%, rgba(220,38,38,.25));
-      box-shadow:0 14px 30px rgba(220,38,38,.18);
-      font-weight:900;
-    }
-    .title{font-weight:850;letter-spacing:.02em}
-    .sub{font-size:12px;color:var(--muted);margin-top:2px}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:7px 10px;border-radius:999px;
-      background: rgba(255,255,255,.90);
-      border:1px solid var(--line);
-      color:var(--muted);
-      font-size:12px;
-      box-shadow: var(--shadow2);
-    }
-    .dot{width:9px;height:9px;border-radius:99px;background:var(--warn);box-shadow:0 0 0 4px rgba(251,191,36,.20)}
-    .dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(34,197,94,.22)}
-    .dot.err{background:var(--bad);box-shadow:0 0 0 4px rgba(251,113,133,.20)}
-
-    .btn{
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.90);
-      color:var(--ink);
-      border-radius:999px;
-      padding:10px 14px;
-      font-weight:750;
-      font-size:12px;
-      cursor:pointer;
-      display:inline-flex;align-items:center;gap:8px;
-      transition:transform .10s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
-      user-select:none;
-    }
-    .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow2)}
-    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
-    .btn-primary{
-      border-color:rgba(220,38,38,.25);
-      background: linear-gradient(135deg, var(--brand2), var(--brand));
-      color:#fff;
-      box-shadow:0 16px 32px rgba(220,38,38,.24);
-    }
-
-    .content{padding:18px}
-    .grid{display:grid;grid-template-columns: 1fr;gap:14px}
-    @media(min-width:980px){.grid{grid-template-columns: .42fr .58fr}}
-
-    .kpis{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:10px;
-      margin-bottom:14px;
-    }
-    .kpi{
-      background: var(--surface2);
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:12px;
-      box-shadow: var(--shadow2);
-    }
-    .kpi .t{font-size:11px;color:var(--muted)}
-    .kpi .v{font-size:18px;font-weight:900}
-    .kpi .s{font-size:11px;color:var(--muted2)}
-
-    .card{
-      background: var(--surface);
-      border:1px solid var(--line);
-      border-radius:22px;
-      padding:14px;
-      box-shadow: var(--shadow2);
-    }
-    .login-logo{
-      width:48px;
-      height:48px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      box-shadow: var(--shadow2);
-      object-fit:cover;
-      background: var(--surface2);
-    }
-    .card h3{margin:0 0 6px;font-size:13px;font-weight:900;letter-spacing:.03em}
-    .hint{color:var(--muted);font-size:12px;line-height:1.35}
-    .statusline{min-height:18px;margin-top:8px;color:var(--muted);font-size:12px}
-    .statusline.error{color:var(--bad)}
-    .mono{font-family:var(--mono)}
-
-    .field{margin-top:10px}
-    .label{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px;margin-bottom:6px}
-    .input,.select,.textarea{
-      width:100%;
-      background: rgba(255,255,255,.96);
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:11px 12px;
-      color:var(--ink);
-      outline:none;
-      font-size:13px;
-      transition:border-color .15s ease, transform .08s ease, background .15s ease;
-    }
-    .input:focus,.select:focus,.textarea:focus{
-      border-color: rgba(220,38,38,.45);
-      box-shadow: 0 0 0 4px rgba(220,38,38,.12);
-      transform: translateY(-1px);
-    }
-    .textarea{min-height:96px;resize:vertical}
-
-    .row{display:grid;grid-template-columns:1fr;gap:10px}
-    @media(min-width:560px){.row.two{grid-template-columns:1fr 1fr}}
-    @media(min-width:820px){.row.three{grid-template-columns:1fr 1fr 1fr}}
-
-    .table{
-      overflow:hidden;border-radius:22px;border:1px solid var(--line);
-      background: var(--surface);
-    }
-    .thead{
-      display:flex;justify-content:space-between;gap:10px;align-items:center;
-      padding:10px 12px;
-      border-bottom:1px solid var(--line);
-      background: var(--surface2);
-    }
-    .thead .t{font-weight:900;font-size:13px}
-    .thead .m{color:var(--muted);font-size:12px}
-    .scroll{max-height:560px;overflow:auto}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    th,td{padding:10px 10px;border-bottom:1px solid var(--line);text-align:left}
-    th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-    tbody tr{cursor:pointer}
-    tbody tr:hover{background:rgba(15,23,42,.04)}
-    .tag{
-      display:inline-flex;align-items:center;
-      padding:4px 10px;border-radius:999px;
-      font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
-      border:1px solid rgba(15,23,42,.10);
-      background: rgba(15,23,42,.04);
-      color: var(--muted);
-    }
-    .tag.available{border-color:rgba(22,163,74,.30);color:#166534;background:rgba(22,163,74,.12)}
-    .tag.pending{border-color:rgba(245,158,11,.30);color:#92400e;background:rgba(245,158,11,.12)}
-    .tag.sold{border-color:rgba(239,68,68,.30);color:#991b1b;background:rgba(239,68,68,.10)}
-    .tag.new{border-color:rgba(15,23,42,.10);color:var(--ink);background:rgba(15,23,42,.05)}
-    .tag.booked{border-color:rgba(22,163,74,.30);color:#166534;background:rgba(22,163,74,.12)}
-    .tag.closed{border-color:rgba(15,23,42,.12);color:var(--muted);background:rgba(15,23,42,.04)}
-
-    .thumb{
-      width:48px;height:36px;border-radius:10px;object-fit:cover;border:1px solid var(--line);
-      background: rgba(15,23,42,.04);
-    }
-
-    .galleryGrid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-      gap:10px;
-      margin-top:10px;
-    }
-    .galleryItem{
-      border-radius:14px;
-      border:1px solid var(--line);
-      background: var(--surface2);
-      padding:8px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .galleryItem img{
-      width:100%;
-      height:88px;
-      border-radius:10px;
-      object-fit:cover;
-      background: rgba(15,23,42,.04);
-    }
-    .galleryActions{display:flex;gap:6px;flex-wrap:wrap}
-    .galleryActions .btn{padding:6px 10px;font-size:10px}
-    .btn-mini{padding:6px 10px;font-size:10px}
-
-    /* Modal */
-    .backdrop{
-      position:fixed;inset:0;display:none;align-items:center;justify-content:center;
-      background: rgba(15,23,42,.35);
-      backdrop-filter: blur(10px);
-      padding:16px;
-      z-index:60;
-    }
-    .backdrop.show{display:flex}
-    .modal{
-      width:100%;
-      max-width:980px;
-      border-radius:26px;
-      border:1px solid var(--line);
-      background: var(--surface);
-      box-shadow: 0 28px 60px rgba(15,23,42,.24);
-      overflow:hidden;
-    }
-    .mhead{
-      padding:14px 16px;
-      display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
-      border-bottom:1px solid var(--line);
-      background: var(--surface2);
-    }
-    .mhead h3{margin:0;font-size:14px;font-weight:950}
-    .xbtn{
-      width:36px;height:36px;border-radius:999px;
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.90);
-      color:var(--ink);
-      cursor:pointer;
-      font-size:18px;
-    }
-    .xbtn:hover{background:rgba(15,23,42,.04)}
-    .mbody{padding:16px}
-    .footerBtns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
-
-    /* Toast */
-    #toast{
-      position:fixed;right:16px;bottom:16px;z-index:80;
-      display:none;align-items:center;gap:10px;
-      padding:10px 14px;border-radius:999px;
-      background: rgba(255,255,255,.96);
-      border:1px solid var(--line);
-      color:var(--muted);
-      box-shadow: var(--shadow2);
-    }
-    #toast.show{display:flex}
-    #toastDot{width:10px;height:10px;border-radius:99px;background:var(--brand)}
-    #toast.success{border-color:rgba(22,163,74,.30);color:#166534}
-    #toast.error{border-color:rgba(239,68,68,.30);color:#991b1b}
-  </style>
-</head>
-
-<body>
-<div class="wrap">
-  <div class="shell">
-
-    <div class="top">
-      <div class="brand">
-        <div class="logo">D</div>
-        <div>
-          <div class="title" id="topTitle">Dealer Portal</div>
-          <div class="sub" id="topSub">Manage inventory, pricing, and media in one place.</div>
-        </div>
-      </div>
-      <div class="actions">
-        <div class="pill">
-          <span class="dot" id="apiDot"></span>
-          <span id="apiText">Offline</span>
-        </div>
-        <a class="btn" id="storefrontLink" href="/storefront">Storefront ↗</a>
-        <button class="btn" id="btnLogout" type="button">Logout ⎋</button>
-      </div>
-    </div>
-
-    <div class="content">
-      <!-- LOGIN -->
-      <div class="grid" id="loginView">
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-            <img class="login-logo" src="https://res.cloudinary.com/dd8pjjxsm/image/upload/v1768234190/ChatGPT_Image_Sep_6_2025_08_27_53_AM_xd60o7.png" alt="Pytch logo" />
-            <div>
-              <h3 style="margin:0">Sign in</h3>
-              <div class="hint" style="margin-top:4px">Enter your dealer passcode to access inventory.</div>
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:10px">
-            <div class="field">
-              <div class="label"><span>Passcode</span><span>Required</span></div>
-              <input class="input" id="passcode" type="password" placeholder="123456" autocomplete="current-password">
-            </div>
-          </div>
-
-          <div class="footerBtns">
-            <button class="btn" id="btnDemo" type="button">Demo ★</button>
-            <button class="btn btn-primary" id="btnLogin" type="button">Sign in →</button>
-          </div>
-
-          <div class="statusline" id="loginStatus"></div>
-        </div>
-
-        <div class="card">
-          <h3>Photo storage</h3>
-          <div class="hint">
-            Photos are stored securely in the shared media library. Once saved, they appear on the storefront instantly.
-            If uploads pause, check your connection or contact support.
-          </div>
-          <div class="statusline" id="cfgLine"></div>
-        </div>
-      </div>
-
-      <!-- DASH -->
-      <div class="hidden" id="dashView">
-        <div class="kpis" id="kpiRow">
-          <div class="kpi">
-            <div class="t">Total inventory</div>
-            <div class="v" id="kTotal">0</div>
-            <div class="s">Vehicles listed</div>
-          </div>
-          <div class="kpi">
-            <div class="t">Available</div>
-            <div class="v" id="kAvailable">0</div>
-            <div class="s">Ready for sale</div>
-          </div>
-          <div class="kpi">
-            <div class="t">Pending</div>
-            <div class="v" id="kPending">0</div>
-            <div class="s">In negotiation</div>
-          </div>
-          <div class="kpi">
-            <div class="t">Sold</div>
-            <div class="v" id="kSold">0</div>
-            <div class="s">Closed sales</div>
-          </div>
-          <div class="kpi">
-            <div class="t">Total requests</div>
-            <div class="v" id="kRequests">0</div>
-            <div class="s">Leads received</div>
-          </div>
-          <div class="kpi">
-            <div class="t">New today</div>
-            <div class="v" id="kNewToday">0</div>
-            <div class="s">Requests today</div>
-          </div>
-          <div class="kpi">
-            <div class="t">Booked</div>
-            <div class="v" id="kBooked">0</div>
-            <div class="s">Confirmed viewings</div>
-          </div>
-        </div>
-
-        <div class="grid">
-          <div class="card">
-          <h3>Controls</h3>
-          <div class="hint">Search / filter your inventory.</div>
-
-          <div class="field">
-            <div class="label"><span>Search</span><span>Vehicle / Make / Model</span></div>
-            <input class="input" id="q" placeholder="Search…">
-          </div>
-
-          <div class="row two">
-            <div class="field">
-              <div class="label"><span>Status</span><span>Filter</span></div>
-              <select class="select" id="filterStatus">
-                <option value="">All</option>
-                <option value="available">Available</option>
-                <option value="pending">Pending</option>
-                <option value="sold">Sold</option>
-              </select>
-            </div>
-            <div class="field">
-              <div class="label"><span>Sort</span><span>Default</span></div>
-              <select class="select" id="sort">
-                <option value="newest">Newest</option>
-                <option value="priceAsc">Price: Low → High</option>
-                <option value="priceDesc">Price: High → Low</option>
-                <option value="yearDesc">Year: New → Old</option>
-                <option value="yearAsc">Year: Old → New</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="footerBtns">
-            <button class="btn" id="btnRefresh" type="button">Refresh ⟳</button>
-            <button class="btn btn-primary" id="btnAdd" type="button">Add vehicle ＋</button>
-            <button class="btn" id="btnExportInventory" type="button">Export inventory CSV</button>
-          </div>
-
-          <div class="statusline" id="dashStatus"></div>
-        </div>
-
-          <div class="table">
-          <div class="thead">
-            <div>
-              <div class="t">Your vehicles</div>
-              <div class="m">Showing <span id="count">0</span> vehicles</div>
-            </div>
-            <div class="m" id="lastUpdated">—</div>
-          </div>
-
-          <div class="scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Vehicle</th>
-                  <th>Specs</th>
-                  <th>Status</th>
-                  <th>Price</th>
-                  <th>Media</th>
-                </tr>
-              </thead>
-              <tbody id="tbody"></tbody>
-            </table>
-          </div>
-          </div>
-        </div>
-
-        <div class="card" id="requestsCard" style="margin-top:14px">
-          <h3>Requests</h3>
-          <div class="hint">Track new leads and update their status.</div>
-
-          <div class="row two" style="margin-top:10px">
-            <div class="field">
-              <div class="label"><span>Status</span><span>Filter</span></div>
-              <select class="select" id="leadStatusFilter">
-                <option value="">All</option>
-                <option value="new">New</option>
-                <option value="booked">Booked</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-            <div class="field">
-              <div class="label"><span>Date range</span><span>Filter</span></div>
-              <div class="row two">
-                <input class="input" id="leadStart" type="date" />
-                <input class="input" id="leadEnd" type="date" />
-              </div>
-            </div>
-          </div>
-
-          <div class="footerBtns" style="justify-content:flex-start">
-            <button class="btn" id="btnLeadsRefresh" type="button">Refresh requests</button>
-            <button class="btn" id="btnExportLeads" type="button">Export CSV</button>
-          </div>
-
-          <div class="table" style="margin-top:10px">
-            <div class="thead">
-              <div>
-                <div class="t">Incoming requests</div>
-                <div class="m">Showing <span id="leadCount">0</span> requests</div>
-              </div>
-              <div class="m" id="leadUpdated">—</div>
-            </div>
-            <div class="scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Vehicle</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Requested</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="leadBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="statusline" id="leadStatus"></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- MODAL -->
-<div class="backdrop" id="backdrop" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-label="Vehicle editor">
-    <div class="mhead">
-      <div>
-        <h3 id="mTitle">Add vehicle</h3>
-        <div class="sub" id="mSub">Save vehicle details and upload photos.</div>
-      </div>
-      <button class="xbtn" id="mClose" type="button" aria-label="Close">×</button>
-    </div>
-
-    <div class="mbody">
-      <div class="row two">
-        <div class="field">
-          <div class="label"><span>Vehicle ID</span><span>Auto if empty</span></div>
-          <input class="input mono" id="vId" placeholder="VEH-12345">
-        </div>
-        <div class="field">
-          <div class="label"><span>Status</span><span>Required</span></div>
-          <select class="select" id="vStatus">
-            <option value="available">Available</option>
-            <option value="pending">Pending</option>
-            <option value="sold">Sold</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="row two">
-        <div class="field">
-          <div class="label"><span>Make</span><span>Required</span></div>
-          <input class="input" id="vMake" placeholder="Honda">
-        </div>
-        <div class="field">
-          <div class="label"><span>Model</span><span>Required</span></div>
-          <input class="input" id="vModel" placeholder="Civic">
-        </div>
-      </div>
-
-      <div class="row three">
-        <div class="field">
-          <div class="label"><span>Year</span><span>Optional</span></div>
-          <input class="input" id="vYear" type="number" placeholder="2018">
-        </div>
-        <div class="field">
-          <div class="label"><span>Price (JMD)</span><span>Optional</span></div>
-          <input class="input" id="vPrice" type="number" placeholder="1250000">
-        </div>
-        <div class="field">
-          <div class="label"><span>Title</span><span>Optional</span></div>
-          <input class="input" id="vTitle" placeholder="2018 Honda Civic — Clean unit">
-        </div>
-      </div>
-
-      <div class="field">
-        <div class="label"><span>Notes</span><span>Shown to customers</span></div>
-        <textarea class="textarea" id="vNotes" placeholder="Financing, trade-ins, condition, etc."></textarea>
-      </div>
-
-      <div class="card" style="margin-top:12px">
-        <h3>Photos</h3>
-        <div class="hint">Upload up to 7 images. Set the hero image for storefront display.</div>
-
-        <div class="row two">
-          <div class="field">
-            <div class="label"><span>Choose files</span><span>Images (max 7)</span></div>
-            <input class="input" id="files" type="file" multiple accept="image/*">
-          </div>
-        </div>
-
-        <div class="galleryGrid" id="galleryGrid"></div>
-        <input class="hidden" id="replaceFile" type="file" accept="image/*" />
-
-        <div class="statusline" id="uploadLine"></div>
-      </div>
-
-      <div class="footerBtns">
-        <button class="btn" id="btnCancel" type="button">Cancel ×</button>
-        <button class="btn btn-primary" id="btnSave" type="button">Save ✓</button>
-      </div>
-
-      <div class="statusline" id="mStatus"></div>
-    </div>
-  </div>
-</div>
-
-<div id="toast"><div id="toastDot"></div><div id="toastMsg"></div></div>
-
-<script>
-  const API = {
+const API = {
     login: () => "/api/dealer/login",
     vehicles: () => "/api/dealer/vehicles",
     leads: () => "/api/dealer/leads",
@@ -644,7 +39,6 @@
     kNewToday: el("kNewToday"),
     kBooked: el("kBooked"),
 
-    dealerId: el("dealerId"),
     passcode: el("passcode"),
     btnLogin: el("btnLogin"),
     btnDemo: el("btnDemo"),
@@ -657,6 +51,7 @@
     sort: el("sort"),
     btnRefresh: el("btnRefresh"),
     btnAdd: el("btnAdd"),
+    btnExportInventory: el("btnExportInventory"),
     dashStatus: el("dashStatus"),
     count: el("count"),
     lastUpdated: el("lastUpdated"),
@@ -678,6 +73,12 @@
     vPrice: el("vPrice"),
     vTitle: el("vTitle"),
     vNotes: el("vNotes"),
+    vMileage: el("vMileage"),
+    vTransmission: el("vTransmission"),
+    vFuelType: el("vFuelType"),
+    vBodyType: el("vBodyType"),
+    vColor: el("vColor"),
+    vVin: el("vVin"),
 
     files: el("files"),
     galleryGrid: el("galleryGrid"),
@@ -703,6 +104,7 @@
     token: null,
     dealerId: null,
     dealerName: null,
+    configDealerId: "",
     vehicles: [],
     leads: [],
     editing: null,
@@ -728,6 +130,7 @@
 
     ui.btnRefresh.addEventListener("click", loadVehicles);
     ui.btnAdd.addEventListener("click", ()=>openModal(null));
+    ui.btnExportInventory.addEventListener("click", exportInventory);
 
     ui.q.addEventListener("input", render);
     ui.filterStatus.addEventListener("change", render);
@@ -757,8 +160,12 @@
       CLOUD.cloudName = data.cloudinary?.cloudName || "";
       CLOUD.uploadPreset = data.cloudinary?.uploadPreset || "";
       CLOUD.baseFolder = data.cloudinary?.baseFolder || "mediaexclusive";
+      state.configDealerId = String(data.dealerId || "").trim().toUpperCase();
 
-      if(!CLOUD.cloudName){
+      if(!state.configDealerId){
+        ui.cfgLine.textContent = "Dealer profile is not connected. Contact support.";
+        ui.cfgLine.classList.add("error");
+      } else if(!CLOUD.cloudName){
         ui.cfgLine.textContent = "Media storage is not configured. Please contact support.";
         ui.cfgLine.classList.add("error");
       } else if(!CLOUD.uploadPreset){
@@ -791,14 +198,13 @@
   }
 
   async function doLogin(){
-    const dealerId = (ui.dealerId.value || "").trim().toUpperCase();
     const passcode = (ui.passcode.value || "").trim();
-    if(!dealerId || !passcode){
-      setLoginStatus("Enter Dealer ID + passcode.", true);
+    if(!passcode){
+      setLoginStatus("Enter your passcode.", true);
       return;
     }
-    if(!isValidDealerId(dealerId)){
-      setLoginStatus("Dealer ID must be two letters followed by three numbers.", true);
+    if(!state.configDealerId){
+      setLoginStatus("Dealer profile not configured. Contact support.", true);
       return;
     }
     setLoginStatus("Signing in…", false);
@@ -807,14 +213,14 @@
       const res = await fetch(API.login(), {
         method:"POST",
         headers:{ "Content-Type":"application/json", "Accept":"application/json" },
-        body: JSON.stringify({ dealerId, passcode })
+        body: JSON.stringify({ dealerId: state.configDealerId, passcode })
       });
       const data = await res.json().catch(()=>null);
       if(!res.ok || !data || data.ok !== true) throw new Error(data?.error || "Login failed");
 
       state.token = data.token;
-      state.dealerId = data.dealerId || dealerId;
-      state.dealerName = data.dealerName || dealerId;
+      state.dealerId = data.dealerId || state.configDealerId;
+      state.dealerName = data.dealerName || state.configDealerId;
       state.demo = false;
 
       localStorage.setItem("dealer_token", state.token);
@@ -834,7 +240,7 @@
   function enterDemo(){
     state.demo = true;
     state.token = "demo-token";
-    state.dealerId = "AA123";
+    state.dealerId = state.configDealerId || "AA123";
     state.dealerName = "Demo Dealer";
     state.vehicles = demoVehicles();
     setApi("Demo", "off");
@@ -873,9 +279,9 @@
     ui.btnLogout.disabled = false;
 
     ui.topTitle.textContent = state.dealerName || "Dealer Portal";
-    ui.topSub.textContent = `${state.dealerId || ""} · inventory & media`;
+    ui.topSub.textContent = "Inventory & media overview";
     if(state.dealerId){
-      ui.storefrontLink.href = `/storefront/${encodeURIComponent(state.dealerId)}`;
+      ui.storefrontLink.href = "/storefront";
     }
     loadVehicles();
     loadLeads();
@@ -1151,6 +557,47 @@
     URL.revokeObjectURL(url);
   }
 
+  function exportInventory(){
+    const list = state.vehicles || [];
+    if(!list.length){
+      toast("No inventory to export.", "error");
+      return;
+    }
+    const headers = [
+      "vehicleId",
+      "title",
+      "make",
+      "model",
+      "year",
+      "price",
+      "status",
+      "notes",
+      "mileage",
+      "transmission",
+      "fuelType",
+      "bodyType",
+      "color",
+      "vin",
+      "heroImage",
+      "images",
+      "updatedAt"
+    ];
+    const rows = list.map((v) => headers.map((h) => {
+      if (h === "images") return Array.isArray(v.images) ? v.images.join("|") : "";
+      return String(v[h] ?? "");
+    }));
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v.replaceAll('"','""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${state.dealerId || "dealer"}_inventory.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function openModal(v){
     state.editing = v ? deepClone(v) : null;
     ui.mTitle.textContent = v ? "Edit vehicle" : "Add vehicle";
@@ -1166,6 +613,12 @@
     ui.vPrice.value = v?.price || "";
     ui.vTitle.value = v?.title || "";
     ui.vNotes.value = v?.notes || "";
+    ui.vMileage.value = v?.mileage ?? "";
+    ui.vTransmission.value = v?.transmission || "";
+    ui.vFuelType.value = v?.fuelType || "";
+    ui.vBodyType.value = v?.bodyType || "";
+    ui.vColor.value = v?.color || "";
+    ui.vVin.value = v?.vin || "";
     ui.files.value = "";
     ui.replaceFile.value = "";
     state.replacingIndex = null;
@@ -1312,16 +765,16 @@
       setMStatus("Make + Model are required.", true);
       return;
     }
-    if(!CLOUD.cloudName){
-      setMStatus("Media storage is not configured. Contact support.", true);
-      return;
-    }
     if(!state.demo && !state.token){
       setMStatus("Not logged in.", true);
       return;
     }
 
     const newFiles = ui.files.files ? Array.from(ui.files.files) : [];
+    if(newFiles.length && !CLOUD.cloudName){
+      setMStatus("Media storage is not configured. Contact support.", true);
+      return;
+    }
     const existingImages = Array.isArray(payload.images) ? payload.images : [];
     if(existingImages.length + newFiles.length > 7){
       setMStatus("Maximum 7 images allowed per vehicle.", true);
@@ -1343,6 +796,12 @@
         price: payload.price,
         status: payload.status,
         notes: payload.notes,
+        mileage: payload.mileage,
+        transmission: payload.transmission,
+        fuelType: payload.fuelType,
+        bodyType: payload.bodyType,
+        color: payload.color,
+        vin: payload.vin,
         images: existingImages,
         heroImage: payload.heroImage || "",
       });
@@ -1377,6 +836,12 @@
         price: payload.price,
         status: payload.status,
         notes: payload.notes,
+        mileage: payload.mileage,
+        transmission: payload.transmission,
+        fuelType: payload.fuelType,
+        bodyType: payload.bodyType,
+        color: payload.color,
+        vin: payload.vin,
         images: mergedImages,
         heroImage: heroImage
       });
@@ -1405,6 +870,12 @@
       price: num(ui.vPrice.value),
       title: (ui.vTitle.value || "").trim(),
       notes: (ui.vNotes.value || "").trim(),
+      mileage: numOrNull(ui.vMileage.value),
+      transmission: (ui.vTransmission.value || "").trim(),
+      fuelType: (ui.vFuelType.value || "").trim(),
+      bodyType: (ui.vBodyType.value || "").trim(),
+      color: (ui.vColor.value || "").trim(),
+      vin: (ui.vVin.value || "").trim(),
       images: Array.isArray(state.editing?.images) ? state.editing.images : [],
       heroImage: (state.editing?.heroImage || "")
     };
@@ -1602,6 +1073,12 @@
       price: Number(v.price||0) || 0,
       status: (v.status || "available").toLowerCase(),
       notes: v.notes || "",
+      mileage: (v.mileage!=null && v.mileage!=="") ? Number(v.mileage) : null,
+      transmission: v.transmission || "",
+      fuelType: v.fuelType || "",
+      bodyType: v.bodyType || "",
+      color: v.color || "",
+      vin: v.vin || "",
       heroImage: v.heroImage || "",
       images: Array.isArray(v.images) ? v.images : [],
       updatedAt: v.updatedAt || v.createdAt || new Date().toISOString(),
@@ -1650,9 +1127,6 @@
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   }
-  function isValidDealerId(v){
-    return /^[A-Za-z]{2}\d{3}$/.test(String(v || "").trim());
-  }
   function genVehicleId(){
     return "VEH-" + Math.random().toString(16).slice(2,8).toUpperCase();
   }
@@ -1662,6 +1136,3 @@
       .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
       .replaceAll('"',"&quot;").replaceAll("'","&#39;");
   }
-</script>
-</body>
-</html>
