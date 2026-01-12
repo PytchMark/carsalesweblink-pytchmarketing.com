@@ -218,6 +218,23 @@
     .row{display:grid;grid-template-columns:1fr;gap:8px}
     @media(min-width:560px){.row.two{grid-template-columns:1fr 1fr}}
 
+    .kpis{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .kpi{
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.96);
+      padding:12px;
+      box-shadow:var(--shadow2);
+    }
+    .kpi .t{font-size:11px;color:var(--muted)}
+    .kpi .v{font-size:18px;font-weight:900}
+    .kpi .s{font-size:11px;color:var(--muted2)}
+
     /* Tabs */
     .tabs{
       display:flex;
@@ -444,6 +461,7 @@
             <button class="tab active" id="tabDealers" data-tab="dealers" type="button">Dealers</button>
             <button class="tab" id="tabInventory" data-tab="inventory" type="button">Inventory</button>
             <button class="tab" id="tabRequests" data-tab="requests" type="button">Requests</button>
+            <button class="tab" id="tabDealerView" data-tab="dealerView" type="button">Dealer View</button>
             <button class="tab" id="tabSettings" data-tab="settings" type="button">Settings</button>
           </div>
 
@@ -517,6 +535,40 @@
             <div class="statusline" id="dealerActionStatus"></div>
           </div>
 
+          <div class="panel hidden" id="dealerViewControls" style="margin-top:10px">
+            <h3>Dealer view</h3>
+            <div class="hint">Select a dealer to view inventory, leads, and KPIs.</div>
+
+            <div class="field">
+              <div class="label"><span>Dealer</span><span>Required</span></div>
+              <select id="dealerSelect" class="select"></select>
+            </div>
+
+            <div class="field">
+              <div class="label"><span>Date range</span><span>Filter KPIs</span></div>
+              <select id="dealerRange" class="select">
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <div class="row two" id="dealerCustomRange" style="display:none">
+              <div class="field">
+                <div class="label"><span>Start</span></div>
+                <input id="dealerStart" class="input" type="date" />
+              </div>
+              <div class="field">
+                <div class="label"><span>End</span></div>
+                <input id="dealerEnd" class="input" type="date" />
+              </div>
+            </div>
+
+            <div class="splitBtns">
+              <button class="btn btn-ghost" id="btnDealerViewRefresh" type="button">Refresh dealer view</button>
+            </div>
+          </div>
+
           <!-- System Info (updated to Cloudinary-first) -->
           <div class="panel" style="margin-top:10px">
             <h3>System</h3>
@@ -531,7 +583,7 @@
         </div>
 
         <!-- RIGHT TABLE -->
-        <div class="table-shell">
+        <div class="table-shell" id="mainTable">
           <div class="table-head">
             <div>
               <div class="table-title" id="tableTitle">Dealers</div>
@@ -547,6 +599,92 @@
               </thead>
               <tbody id="tbody"></tbody>
             </table>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="dealerViewPanel">
+          <h3>Dealer dashboard</h3>
+          <div class="hint" id="dealerViewHint">Select a dealer to view KPIs, inventory, and requests.</div>
+
+          <div class="kpis" id="dealerKpis">
+            <div class="kpi">
+              <div class="t">Total inventory</div>
+              <div class="v" id="dkInventory">0</div>
+              <div class="s">Vehicles listed</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Available</div>
+              <div class="v" id="dkAvailable">0</div>
+              <div class="s">In stock</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Sold</div>
+              <div class="v" id="dkSold">0</div>
+              <div class="s">Sales</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Total requests</div>
+              <div class="v" id="dkRequests">0</div>
+              <div class="s">Enquiries</div>
+            </div>
+            <div class="kpi">
+              <div class="t">New requests</div>
+              <div class="v" id="dkNew">0</div>
+              <div class="s">Within range</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Booked</div>
+              <div class="v" id="dkBooked">0</div>
+              <div class="s">Confirmed</div>
+            </div>
+          </div>
+
+          <div class="table-shell" style="margin-top:10px">
+            <div class="table-head">
+              <div>
+                <div class="table-title">Dealer inventory</div>
+                <div class="table-meta">Showing <span id="dealerInvCount">0</span> vehicles</div>
+              </div>
+              <div class="table-meta" id="dealerInvUpdated">—</div>
+            </div>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Vehicle</th>
+                    <th>Status</th>
+                    <th>Price</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody id="dealerInvBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-shell" style="margin-top:10px">
+            <div class="table-head">
+              <div>
+                <div class="table-title">Dealer requests</div>
+                <div class="table-meta">Showing <span id="dealerLeadCount">0</span> requests</div>
+              </div>
+              <div class="table-meta" id="dealerLeadUpdated">—</div>
+            </div>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="dealerLeadBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -643,6 +781,9 @@
       resetPass: () => "/api/admin/reset-passcode",
       inventory: () => "/api/admin/inventory",
       requests: () => "/api/admin/requests",
+      dealerVehicles: (dealerId) => `/api/admin/dealer/${encodeURIComponent(dealerId)}/vehicles`,
+      dealerLeads: (dealerId) => `/api/admin/dealer/${encodeURIComponent(dealerId)}/leads`,
+      dealerLeadStatus: (dealerId) => `/api/admin/dealer/${encodeURIComponent(dealerId)}/leads/status`,
       publicConfig: () => "/api/public/config",
     };
 
@@ -666,6 +807,7 @@
       tabDealers: el("tabDealers"),
       tabInventory: el("tabInventory"),
       tabRequests: el("tabRequests"),
+      tabDealerView: el("tabDealerView"),
       tabSettings: el("tabSettings"),
 
       hint: el("hint"),
@@ -686,6 +828,13 @@
       cloudFolder: el("cloudFolder"),
 
       dealerActions: el("dealerActions"),
+      dealerViewControls: el("dealerViewControls"),
+      dealerSelect: el("dealerSelect"),
+      dealerRange: el("dealerRange"),
+      dealerCustomRange: el("dealerCustomRange"),
+      dealerStart: el("dealerStart"),
+      dealerEnd: el("dealerEnd"),
+      btnDealerViewRefresh: el("btnDealerViewRefresh"),
       newDealerName: el("newDealerName"),
       newDealerId: el("newDealerId"),
       newDealerStatus: el("newDealerStatus"),
@@ -694,6 +843,22 @@
       btnCreateDealer: el("btnCreateDealer"),
       btnOpenDealerModal: el("btnOpenDealerModal"),
       dealerActionStatus: el("dealerActionStatus"),
+
+      mainTable: el("mainTable"),
+      dealerViewPanel: el("dealerViewPanel"),
+      dealerViewHint: el("dealerViewHint"),
+      dkInventory: el("dkInventory"),
+      dkAvailable: el("dkAvailable"),
+      dkSold: el("dkSold"),
+      dkRequests: el("dkRequests"),
+      dkNew: el("dkNew"),
+      dkBooked: el("dkBooked"),
+      dealerInvCount: el("dealerInvCount"),
+      dealerInvUpdated: el("dealerInvUpdated"),
+      dealerInvBody: el("dealerInvBody"),
+      dealerLeadCount: el("dealerLeadCount"),
+      dealerLeadUpdated: el("dealerLeadUpdated"),
+      dealerLeadBody: el("dealerLeadBody"),
 
       dealerBackdrop: el("dealerBackdrop"),
       mClose: el("mClose"),
@@ -724,6 +889,11 @@
       requests: [],
 
       selectedDealer: null,
+      dealerView: {
+        dealerId: "",
+        vehicles: [],
+        leads: []
+      },
 
       demoPasscodes: {},
 
@@ -751,7 +921,7 @@
       ui.btnLogout.addEventListener("click", logout);
       ui.btnRefresh.addEventListener("click", refresh);
 
-      [ui.tabDealers, ui.tabInventory, ui.tabRequests, ui.tabSettings].forEach(btn=>{
+      [ui.tabDealers, ui.tabInventory, ui.tabRequests, ui.tabDealerView, ui.tabSettings].forEach(btn=>{
         btn.addEventListener("click", ()=> setTab(btn.dataset.tab));
       });
 
@@ -769,6 +939,15 @@
 
       ui.btnResetPasscode.addEventListener("click", resetPasscode);
       ui.btnSaveDealer.addEventListener("click", saveDealerChanges);
+
+      ui.dealerSelect.addEventListener("change", () => loadDealerView());
+      ui.dealerRange.addEventListener("change", () => {
+        ui.dealerCustomRange.style.display = ui.dealerRange.value === "custom" ? "grid" : "none";
+        renderDealerView();
+      });
+      ui.dealerStart.addEventListener("change", renderDealerView);
+      ui.dealerEnd.addEventListener("change", renderDealerView);
+      ui.btnDealerViewRefresh.addEventListener("click", loadDealerView);
     }
 
     async function loadPublicConfig(){
@@ -854,12 +1033,17 @@
 
       if(!state.apiOnline){
         ui.dashStatus.textContent = "Ready (demo).";
+        if(state.tab === "dealerView"){
+          populateDealerSelect();
+          loadDealerView();
+          return;
+        }
         render();
         return;
       }
 
       try{
-        if(state.tab === "dealers" || state.tab === "settings"){
+        if(state.tab === "dealers" || state.tab === "settings" || state.tab === "dealerView"){
           const res = await fetch(API.dealers(), { headers: authHeaders() });
           const data = await safeJson(res);
           if(!res.ok || !data?.ok) throw new Error(data?.error || "Failed to load dealers");
@@ -876,6 +1060,10 @@
           const data = await safeJson(res);
           if(!res.ok || !data?.ok) throw new Error(data?.error || "Failed to load requests");
           state.requests = Array.isArray(data.requests) ? data.requests : [];
+        }
+        if(state.tab === "dealerView"){
+          populateDealerSelect();
+          await loadDealerView();
         }
 
         ui.dashStatus.textContent = "Ready.";
@@ -894,21 +1082,27 @@
       ui.tabDealers.classList.toggle("active", tab==="dealers");
       ui.tabInventory.classList.toggle("active", tab==="inventory");
       ui.tabRequests.classList.toggle("active", tab==="requests");
+      ui.tabDealerView.classList.toggle("active", tab==="dealerView");
       ui.tabSettings.classList.toggle("active", tab==="settings");
 
       ui.tableTitle.textContent =
         tab==="dealers" ? "Dealers"
         : tab==="inventory" ? "Inventory"
         : tab==="requests" ? "Viewing requests"
+        : tab==="dealerView" ? "Dealer dashboard"
         : "Platform settings";
 
       ui.hint.textContent =
         tab==="dealers" ? "Create and manage dealer accounts. Reset passcodes. Set WhatsApp + branding."
         : tab==="inventory" ? "Search across all dealers. Verify status and listing quality."
         : tab==="requests" ? "Monitor incoming leads. Promote from New → Booked → Closed."
+        : tab==="dealerView" ? "Choose a dealer to view KPIs, inventory, and leads."
         : "Review environment-driven settings and shortcuts.";
 
       ui.dealerActions.classList.toggle("hidden", tab!=="dealers");
+      ui.dealerViewControls.classList.toggle("hidden", tab!=="dealerView");
+      ui.mainTable.classList.toggle("hidden", tab==="dealerView");
+      ui.dealerViewPanel.classList.toggle("hidden", tab!=="dealerView");
 
       buildStatusFilterOptions(tab);
       buildTableHeaders(tab);
@@ -937,11 +1131,13 @@
         add("new", "New");
         add("booked", "Booked");
         add("closed", "Closed");
+      } else if(tab === "dealerView"){
+        add("", "All");
       } else {
         add("", "All");
       }
 
-      ui.statusFilterWrap.classList.toggle("hidden", tab==="settings");
+      ui.statusFilterWrap.classList.toggle("hidden", tab==="settings" || tab==="dealerView");
     }
 
     function buildTableHeaders(tab){
@@ -965,6 +1161,10 @@
       const f = (ui.statusFilter.value||"").trim().toLowerCase();
 
       let rows = [];
+      if(state.tab==="dealerView"){
+        renderDealerView();
+        return;
+      }
       if(state.tab==="dealers") rows = [...state.dealers];
       if(state.tab==="inventory") rows = [...state.vehicles];
       if(state.tab==="requests") rows = [...state.requests];
@@ -1046,6 +1246,193 @@
         { item:"JWT_SECRET", value:"(server)", hint:"Signs login tokens", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Keep JWT_SECRET long + private.', 'success')">Best practice</button>` },
         { item:"MEDIA_BUCKET (optional)", value:"(server)", hint:"Only used for GCS signed uploads (back-compat)", scope:"Cloud Run env", actionHtml:`<button class="btn btn-ghost" type="button" onclick="toast('Only needed if you still use GCS signed uploads.', 'success')">When needed</button>` },
       ];
+    }
+
+    function populateDealerSelect(){
+      const current = ui.dealerSelect.value || state.dealerView.dealerId;
+      ui.dealerSelect.innerHTML = "";
+      const dealers = state.dealers || [];
+      if(!dealers.length){
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No dealers available";
+        ui.dealerSelect.appendChild(opt);
+        return;
+      }
+      dealers.forEach((d) => {
+        const opt = document.createElement("option");
+        opt.value = d.dealerId;
+        opt.textContent = `${d.name || d.dealerId} (${d.dealerId})`;
+        ui.dealerSelect.appendChild(opt);
+      });
+      if(current && dealers.some(d => d.dealerId === current)){
+        ui.dealerSelect.value = current;
+      }
+      state.dealerView.dealerId = ui.dealerSelect.value || dealers[0].dealerId;
+    }
+
+    function rangeDates(){
+      const mode = ui.dealerRange.value;
+      if(mode === "custom"){
+        const start = ui.dealerStart.value ? new Date(ui.dealerStart.value) : null;
+        const end = ui.dealerEnd.value ? new Date(ui.dealerEnd.value) : null;
+        return { start, end };
+      }
+      const days = Number(mode || 7);
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - (days - 1));
+      return { start, end };
+    }
+
+    async function loadDealerView(){
+      const dealerId = ui.dealerSelect.value || state.dealerView.dealerId;
+      if(!dealerId) return;
+      state.dealerView.dealerId = dealerId;
+      ui.dealerViewHint.textContent = `Viewing ${dealerId}`;
+
+      if(!state.apiOnline){
+        state.dealerView.vehicles = state.vehicles.filter(v => v.dealerId === dealerId);
+        state.dealerView.leads = state.requests.filter(r => r.dealerId === dealerId);
+        ui.dealerInvUpdated.textContent = "Updated: " + fmt(new Date());
+        ui.dealerLeadUpdated.textContent = "Updated: " + fmt(new Date());
+        renderDealerView();
+        return;
+      }
+
+      try{
+        const [invRes, leadRes] = await Promise.all([
+          fetch(API.dealerVehicles(dealerId), { headers: authHeaders() }),
+          fetch(API.dealerLeads(dealerId), { headers: authHeaders() })
+        ]);
+        const invData = await safeJson(invRes);
+        const leadData = await safeJson(leadRes);
+        if(!invRes.ok || !invData?.ok) throw new Error(invData?.error || "Failed to load dealer inventory");
+        if(!leadRes.ok || !leadData?.ok) throw new Error(leadData?.error || "Failed to load dealer leads");
+
+        state.dealerView.vehicles = Array.isArray(invData.vehicles) ? invData.vehicles : [];
+        state.dealerView.leads = Array.isArray(leadData.leads) ? leadData.leads : [];
+        ui.dealerInvUpdated.textContent = "Updated: " + fmt(new Date());
+        ui.dealerLeadUpdated.textContent = "Updated: " + fmt(new Date());
+        renderDealerView();
+      }catch(e){
+        ui.dealerViewHint.textContent = "Failed to load dealer view.";
+        toast("Dealer view load failed: " + (e?.message || "error"), "error");
+      }
+    }
+
+    function renderDealerView(){
+      if(state.tab !== "dealerView") return;
+      const dealerId = state.dealerView.dealerId;
+      if(!dealerId){
+        ui.dealerViewHint.textContent = "Select a dealer to view data.";
+        return;
+      }
+
+      const { start, end } = rangeDates();
+      const leads = state.dealerView.leads || [];
+      const vehicles = state.dealerView.vehicles || [];
+
+      const inRange = leads.filter((l) => {
+        if(!start && !end) return true;
+        const created = l.createdAt ? new Date(l.createdAt) : null;
+        if(start && created && created < start) return false;
+        if(end && created && created > new Date(end.getTime() + 86400000)) return false;
+        return true;
+      });
+
+      ui.dkInventory.textContent = String(vehicles.length);
+      ui.dkAvailable.textContent = String(vehicles.filter(v => (v.status||"").toLowerCase() === "available").length);
+      ui.dkSold.textContent = String(vehicles.filter(v => (v.status||"").toLowerCase() === "sold").length);
+      ui.dkRequests.textContent = String(inRange.length);
+      ui.dkNew.textContent = String(inRange.filter(l => (l.status||"").toLowerCase() === "new").length);
+      ui.dkBooked.textContent = String(inRange.filter(l => (l.status||"").toLowerCase() === "booked").length);
+
+      ui.dealerInvBody.innerHTML = "";
+      ui.dealerInvCount.textContent = String(vehicles.length);
+      if(!vehicles.length){
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.style.color = "var(--muted)";
+        td.style.padding = "14px";
+        td.textContent = "No vehicles for this dealer.";
+        tr.appendChild(td);
+        ui.dealerInvBody.appendChild(tr);
+      } else {
+        vehicles.forEach((v) => {
+          const tr = document.createElement("tr");
+          tr.appendChild(cell(`<div class="mono">${esc(v.vehicleId||"—")}</div><div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(v.make||"")} ${esc(v.model||"")}</div>`));
+          tr.appendChild(cell(invStatusPill(v.status)));
+          tr.appendChild(cell(`<div style="font-weight:900">${money(v.price)}</div>`));
+          tr.appendChild(cell(`<span class="mono">${esc(v.updatedAt||v.createdAt||"—")}</span>`));
+          ui.dealerInvBody.appendChild(tr);
+        });
+      }
+
+      ui.dealerLeadBody.innerHTML = "";
+      ui.dealerLeadCount.textContent = String(leads.length);
+      if(!leads.length){
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 6;
+        td.style.color = "var(--muted)";
+        td.style.padding = "14px";
+        td.textContent = "No requests for this dealer.";
+        tr.appendChild(td);
+        ui.dealerLeadBody.appendChild(tr);
+      } else {
+        leads.forEach((l) => {
+          const tr = document.createElement("tr");
+          tr.appendChild(cell(`<div style="font-weight:900">${esc(l.name||"—")}</div><div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(l.phone||"")}</div>`));
+          tr.appendChild(cell(`<div class="mono">${esc(l.vehicleId||"—")}</div>`));
+          tr.appendChild(cell(`<span class="badgeMini">${esc(l.type||"lead")}</span>`));
+          tr.appendChild(cell(reqPill(l.status)));
+          tr.appendChild(cell(`<span class="mono">${esc(l.createdAt||"—")}</span>`));
+
+          const actions = document.createElement("td");
+          const booked = document.createElement("button");
+          booked.className = "btn btn-ghost";
+          booked.textContent = "Book";
+          booked.onclick = () => updateDealerLeadStatus(dealerId, l.leadId, "booked");
+
+          const closed = document.createElement("button");
+          closed.className = "btn btn-ghost";
+          closed.textContent = "Close";
+          closed.onclick = () => updateDealerLeadStatus(dealerId, l.leadId, "closed");
+
+          actions.appendChild(booked);
+          actions.appendChild(closed);
+          tr.appendChild(actions);
+
+          ui.dealerLeadBody.appendChild(tr);
+        });
+      }
+    }
+
+    async function updateDealerLeadStatus(dealerId, leadId, status){
+      if(!dealerId || !leadId) return;
+      if(!state.apiOnline){
+        const idx = state.dealerView.leads.findIndex(l => l.leadId === leadId);
+        if(idx > -1) state.dealerView.leads[idx].status = status;
+        renderDealerView();
+        return;
+      }
+
+      try{
+        const res = await fetch(API.dealerLeadStatus(dealerId), {
+          method:"POST",
+          headers:{ ...authHeaders(), "Content-Type":"application/json", "Accept":"application/json" },
+          body: JSON.stringify({ leadId, status })
+        });
+        const data = await safeJson(res);
+        if(!res.ok || !data?.ok) throw new Error(data?.error || "Update failed");
+        const idx = state.dealerView.leads.findIndex(l => l.leadId === leadId);
+        if(idx > -1) state.dealerView.leads[idx].status = status;
+        renderDealerView();
+      }catch(e){
+        toast("Lead update failed.", "error");
+      }
     }
 
     // =============================

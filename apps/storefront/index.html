@@ -10,8 +10,8 @@
       --bg:#f6f7fb;
       --surface:#ffffff;
       --surface2:#fbfbfd;
-      --ink:#0f172a;
-      --muted:#64748b;
+      --ink:#0b0b0b;
+      --muted:#6b7280;
       --muted2:#94a3b8;
 
       --brand:#dc2626;         /* red */
@@ -67,7 +67,9 @@
       display:flex;align-items:center;justify-content:center;
       font-weight:900;color:var(--brand);font-size:18px;
       box-shadow: 0 12px 24px rgba(220,38,38,0.12);
+      overflow:hidden;
     }
+    .badge img{width:100%;height:100%;object-fit:cover}
 
     .brand h1{margin:0;font-size:18px;font-weight:780;letter-spacing:.01em}
     .brand .sub{
@@ -234,6 +236,13 @@
       object-fit:cover;
       display:block;
     }
+    .media video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      background:#000;
+    }
 
     .tag{
       position:absolute;top:10px;left:10px;
@@ -292,6 +301,38 @@
       border:1px solid var(--line);
       color: var(--ink);
       box-shadow: var(--shadow2);
+    }
+
+    .btn-primary{
+      width:100%;
+      justify-content:center;
+      font-size:13px;
+      padding:11px 14px;
+    }
+
+    .actionPanel{
+      display:none;
+      flex-direction:column;
+      gap:10px;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.96);
+      box-shadow: var(--shadow2);
+      margin-top:10px;
+    }
+    .actionPanel.show{display:flex}
+    .actionPanel .btn{width:100%;justify-content:center}
+
+    .errorState{
+      border-radius:22px;
+      border:1px dashed rgba(15,23,42,.18);
+      background: rgba(255,255,255,.85);
+      padding:18px;
+      color: var(--muted);
+      text-align:center;
+      box-shadow: var(--shadow2);
+      margin-top: 10px;
     }
 
     .empty{
@@ -407,7 +448,7 @@
 
       <header class="topbar">
         <div class="brand">
-          <div class="badge">C</div>
+          <div class="badge" id="dealerLogo">C</div>
           <div>
             <h1 id="storeTitle">Live Inventory</h1>
             <div class="sub" id="storeSub">Browse what’s in stock. Book a viewing in seconds.</div>
@@ -417,19 +458,15 @@
         <div class="right">
           <div class="pill" title="Inventory updates in real time">
             <span class="dot"></span>
-            <span id="dealerPill">Dealer: All</span>
+            <span id="dealerPill">Dealer</span>
           </div>
           <button class="btn btn-ghost" id="btnRefresh" type="button">Refresh</button>
+          <a class="btn btn-ghost" id="whatsAppBtn" href="#" target="_blank" rel="noreferrer">WhatsApp</a>
           <a class="btn btn-ghost" href="/dealer">Dealer portal</a>
         </div>
       </header>
 
       <section class="filters" aria-label="Inventory filters">
-        <div class="fg">
-          <div class="lbl">Dealer ID</div>
-          <input class="input" id="fDealer" placeholder="Optional (e.g. dealerpytch)" />
-        </div>
-
         <div class="fg">
           <div class="lbl">Search</div>
           <input class="input" id="fSearch" placeholder="Make, model, title, notes…" />
@@ -509,6 +546,10 @@
       </div>
 
       <section>
+        <div id="invalidLink" class="errorState" style="display:none">
+          <div style="font-weight:850;color:var(--ink);margin-bottom:6px">Invalid dealer link</div>
+          This storefront link is missing a dealer ID. Please request a valid dealer link.
+        </div>
         <div id="grid" class="grid"></div>
         <div id="empty" class="empty" style="display:none">
           <div style="font-weight:850;color:var(--ink);margin-bottom:6px">No matches yet</div>
@@ -554,8 +595,8 @@
         <div>
           <div class="lbl">Viewing type</div>
           <select class="select" id="mType">
-            <option value="video">Video viewing (quick walkthrough)</option>
-            <option value="in_person">Live / in-person viewing</option>
+            <option value="live_video">Live video viewing</option>
+            <option value="walk_in">Book a walk-in</option>
           </select>
         </div>
       </div>
@@ -586,11 +627,14 @@
     let allVehicles = [];
     let filtered = [];
     let cloudCfg = { cloudName:"", baseFolder:"" };
+    let currentDealerId = "";
+    let dealerProfile = null;
 
     let booking = {
       dealerId: "",
       vehicleId: "",
-      title: ""
+      title: "",
+      dealerName: ""
     };
 
     // --------- Helpers ----------
@@ -602,6 +646,30 @@
     }
     function norm(s){ return String(s || "").trim().toLowerCase(); }
     function isHttpUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
+    function digitsOnly(s){ return String(s || "").replace(/\\D+/g, ""); }
+    function esc(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#39;");
+    }
+
+    function buildWhatsAppLink(title, vehicleId){
+      const digits = digitsOnly(dealerProfile?.whatsapp || "");
+      if (!digits) return "#";
+      const dealerName = dealerProfile?.name || "Dealer";
+      const link = `${location.origin}/d/${encodeURIComponent(currentDealerId || "")}`;
+      const messageParts = [
+        `${dealerName} — WhatsApp request`,
+        title ? `Vehicle: ${title}` : "",
+        vehicleId ? `ID: ${vehicleId}` : "",
+        `Link: ${link}`
+      ].filter(Boolean);
+      const text = encodeURIComponent(messageParts.join("\\n"));
+      return `https://wa.me/${digits}?text=${text}`;
+    }
 
     function showToast(msg, ok=true){
       const t = qs("toast");
@@ -616,10 +684,14 @@
 
     function parseDealerFromUrl(){
       const u = new URL(location.href);
-      const d = u.searchParams.get("dealerId") || "";
+      const pathMatch = u.pathname.match(/^\/d\/([^/]+)/i);
+      const d = (pathMatch && pathMatch[1]) ? decodeURIComponent(pathMatch[1]) : "";
+      const fromQuery = u.searchParams.get("dealerId") || "";
+      const dealerId = (d || fromQuery || "").trim();
       const vehicleId = u.searchParams.get("vehicleId") || "";
-      if (d) qs("fDealer").value = d;
+      currentDealerId = dealerId;
       if (vehicleId) qs("fSearch").value = vehicleId;
+      return dealerId;
     }
 
     function setLoadingSkeleton(){
@@ -669,13 +741,57 @@
       }
     }
 
+    async function loadDealerProfile(){
+      if (!currentDealerId) return null;
+      try{
+        const url = new URL("/api/public/dealer", location.origin);
+        url.searchParams.set("dealerId", currentDealerId);
+        const res = await fetch(url.toString(), { headers:{ "Accept":"application/json" }});
+        const data = await res.json().catch(()=>null);
+        dealerProfile = data?.dealer || null;
+        applyDealerBranding();
+        return dealerProfile;
+      }catch{
+        dealerProfile = null;
+        applyDealerBranding();
+        return null;
+      }
+    }
+
+    function applyDealerBranding(){
+      const badge = qs("dealerLogo");
+      if (dealerProfile?.logoUrl && isHttpUrl(dealerProfile.logoUrl)){
+        badge.innerHTML = `<img src="${dealerProfile.logoUrl}" alt="${esc(dealerProfile.name || "Dealer logo")}" />`;
+      } else {
+        badge.textContent = "C";
+      }
+      const name = dealerProfile?.name || "Live Inventory";
+      qs("storeTitle").textContent = name;
+      qs("storeSub").textContent = "Browse verified inventory. Make a request in seconds.";
+      qs("dealerPill").textContent = name;
+
+      const wa = qs("whatsAppBtn");
+      if (dealerProfile?.whatsapp){
+        wa.href = buildWhatsAppLink("", "");
+        wa.style.display = "inline-flex";
+      } else {
+        wa.style.display = "none";
+      }
+    }
+
     // --------- Fetch inventory ----------
     async function loadInventory(){
-      const dealerId = qs("fDealer").value.trim();
-      qs("dealerPill").textContent = "Dealer: " + (dealerId || "All");
+      const dealerId = currentDealerId;
+      qs("dealerPill").textContent = dealerProfile?.name ? dealerProfile.name : (dealerId || "Dealer");
+      qs("invalidLink").style.display = dealerId ? "none" : "block";
+      if (!dealerId){
+        allVehicles = [];
+        render([]);
+        return;
+      }
 
       const url = new URL("/api/public/vehicles", location.origin);
-      if (dealerId) url.searchParams.set("dealerId", dealerId);
+      url.searchParams.set("dealerId", dealerId);
 
       setLoadingSkeleton();
 
@@ -768,6 +884,19 @@
       updateKpis(filtered);
     }
 
+    const tips = [
+      "Ask for a live video viewing to confirm the condition.",
+      "Send a walk-in request to lock a time slot today.",
+      "Compare trims and mileage — we’ll share the details fast.",
+      "Short on time? Use WhatsApp for a quick response.",
+    ];
+    let tipIndex = 0;
+
+    function rotateTip(){
+      tipIndex = (tipIndex + 1) % tips.length;
+      qs("kTip").textContent = tips[tipIndex];
+    }
+
     function updateKpis(list){
       qs("kTotal").textContent = String(list.length);
 
@@ -793,7 +922,7 @@
       }
 
       if (!list.length) qs("kTip").textContent = "Try clearing filters or searching by make/model.";
-      else qs("kTip").textContent = "Want a quick look? Use “Video viewing” and we’ll walk you through it.";
+      else qs("kTip").textContent = tips[tipIndex];
     }
 
     // --------- Media helper (Cloudinary URLs in Sheets) ----------
@@ -817,6 +946,12 @@
         if (x && isHttpUrl(x.publicUrl)) return x.publicUrl;
         if (x && isHttpUrl(x.url)) return x.url;
       }
+      return "";
+    }
+
+    function pickHeroVideo(v){
+      const heroVideo = v?.heroVideo || "";
+      if (isHttpUrl(heroVideo)) return heroVideo;
       return "";
     }
 
@@ -849,7 +984,7 @@
 
       list.forEach(v=>{
         const title = deriveTitle(v);
-        const dealerId = v.dealerId || "unknown";
+        const dealerId = currentDealerId || v.dealerId || "unknown";
         const vehicleId = v.vehicleId || "unknown";
         const status = String(v.status||"").toLowerCase();
 
@@ -861,11 +996,20 @@
 
         const tag = document.createElement("div");
         tag.className = "tag";
-        tag.innerHTML = `<span class="miniDot"></span><span>${dealerId}</span>`;
+        tag.innerHTML = `<span class="miniDot"></span><span>Verified dealer</span>`;
         media.appendChild(tag);
 
+        const heroVideo = pickHeroVideo(v);
         const hero = pickHeroUrl(v);
-        if (hero){
+        if (heroVideo){
+          const video = document.createElement("video");
+          video.src = heroVideo;
+          video.controls = true;
+          video.muted = true;
+          video.playsInline = true;
+          video.preload = "metadata";
+          media.appendChild(video);
+        } else if (hero){
           const img = document.createElement("img");
           img.alt = title;
           img.loading = "lazy";
@@ -915,37 +1059,47 @@
         const actions = document.createElement("div");
         actions.className = "actions";
 
-        const b1 = document.createElement("button");
-        b1.className = "btn btn-sm";
-        b1.type = "button";
-        b1.textContent = "Video viewing";
-        b1.onclick = ()=> openBooking("video", dealerId, vehicleId, title);
+        const makeRequest = document.createElement("button");
+        makeRequest.className = "btn btn-primary";
+        makeRequest.type = "button";
+        makeRequest.textContent = "Make Request";
 
-        const b2 = document.createElement("button");
-        b2.className = "btn btn-outline btn-sm";
-        b2.type = "button";
-        b2.textContent = "Live viewing";
-        b2.onclick = ()=> openBooking("in_person", dealerId, vehicleId, title);
+        const panel = document.createElement("div");
+        panel.className = "actionPanel";
 
-        const b3 = document.createElement("button");
-        b3.className = "btn btn-lite btn-sm";
-        b3.type = "button";
-        b3.textContent = "Copy link";
-        b3.onclick = async ()=>{
-          try{
-            const u = new URL(location.href);
-            u.searchParams.set("dealerId", dealerId);
-            u.searchParams.set("vehicleId", vehicleId);
-            await navigator.clipboard.writeText(u.toString());
-            showToast("Link copied.");
-          }catch(e){
-            showToast("Copy failed. You can copy from the address bar.", false);
-          }
+        const waBtn = document.createElement("button");
+        waBtn.className = "btn btn-ghost btn-sm";
+        waBtn.type = "button";
+        waBtn.textContent = "WhatsApp chat request";
+        waBtn.onclick = () => {
+          const link = buildWhatsAppLink(title, vehicleId);
+          window.open(link, "_blank", "noopener");
         };
 
-        actions.appendChild(b1);
-        actions.appendChild(b2);
-        actions.appendChild(b3);
+        const liveBtn = document.createElement("button");
+        liveBtn.className = "btn btn-sm";
+        liveBtn.type = "button";
+        liveBtn.textContent = "Live Video Viewing";
+        liveBtn.onclick = () => openBooking("live_video", dealerId, vehicleId, title);
+
+        const walkBtn = document.createElement("button");
+        walkBtn.className = "btn btn-outline btn-sm";
+        walkBtn.type = "button";
+        walkBtn.textContent = "Book a Walk-In";
+        walkBtn.onclick = () => openBooking("walk_in", dealerId, vehicleId, title);
+
+        panel.appendChild(waBtn);
+        panel.appendChild(liveBtn);
+        panel.appendChild(walkBtn);
+
+        makeRequest.onclick = () => {
+          const isOpen = panel.classList.contains("show");
+          document.querySelectorAll(".actionPanel").forEach((el) => el.classList.remove("show"));
+          if (!isOpen) panel.classList.add("show");
+        };
+
+        actions.appendChild(makeRequest);
+        actions.appendChild(panel);
 
         c.appendChild(t);
         c.appendChild(meta);
@@ -955,7 +1109,7 @@
         micro.className = "meta";
         micro.style.fontSize = "11.5px";
         micro.style.color = "var(--muted2)";
-        micro.textContent = "Requesting a viewing doesn’t commit you — it just reserves a time slot.";
+        micro.textContent = "Requests are fast and non-binding. We confirm the time with you.";
         c.appendChild(micro);
 
         c.appendChild(actions);
@@ -969,13 +1123,13 @@
 
     // --------- Booking funnel ----------
     function openBooking(type, dealerId, vehicleId, title){
-      booking = { dealerId, vehicleId, title };
+      booking = { dealerId, vehicleId, title, dealerName: dealerProfile?.name || "" };
       qs("mType").value = type;
-      qs("mTitle").textContent = type==="video" ? "Book a video viewing" : "Book a live viewing";
+      qs("mTitle").textContent = type==="live_video" ? "Book a live video viewing" : "Book a walk-in";
       qs("mSub").textContent =
-        type==="video"
-          ? "Fast walkthrough — great for narrowing down options."
-          : "Inspect in person — ideal before making a final decision.";
+        type==="live_video"
+          ? "Get a live video tour — we’ll answer questions in real time."
+          : "Visit in person — choose a time and we’ll confirm.";
       qs("mStatus").textContent = "";
       qs("backdrop").style.display = "flex";
       qs("backdrop").setAttribute("aria-hidden","false");
@@ -1054,12 +1208,19 @@
     qs("mCancel").onclick = closeBooking;
     qs("backdrop").addEventListener("click",(e)=>{ if(e.target.id==="backdrop") closeBooking(); });
     qs("mSubmit").onclick = submitBooking;
+    document.addEventListener("click", (e)=>{
+      if (!e.target.closest(".actions")) {
+        document.querySelectorAll(".actionPanel").forEach((el) => el.classList.remove("show"));
+      }
+    });
 
     // Boot
     (async ()=>{
       parseDealerFromUrl();
       await loadConfig(); // not strictly required; kept for future enhancements
+      await loadDealerProfile();
       loadInventory();
+      setInterval(rotateTip, 5200);
     })();
   </script>
 </body>

@@ -104,6 +104,23 @@
     .grid{display:grid;grid-template-columns: 1fr;gap:14px}
     @media(min-width:980px){.grid{grid-template-columns: .42fr .58fr}}
 
+    .kpis{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .kpi{
+      background: rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:12px;
+      box-shadow: 0 12px 26px rgba(0,0,0,.25);
+    }
+    .kpi .t{font-size:11px;color:var(--muted)}
+    .kpi .v{font-size:18px;font-weight:900}
+    .kpi .s{font-size:11px;color:var(--muted2)}
+
     .card{
       background: rgba(0,0,0,.22);
       border:1px solid rgba(255,255,255,.10);
@@ -170,6 +187,40 @@
     .tag.available{border-color:rgba(34,197,94,.45);color:#bbf7d0;background:rgba(34,197,94,.12)}
     .tag.pending{border-color:rgba(251,191,36,.45);color:#fde68a;background:rgba(251,191,36,.12)}
     .tag.sold{border-color:rgba(251,113,133,.45);color:#fecaca;background:rgba(251,113,133,.12)}
+    .tag.new{border-color:rgba(255,255,255,.18);color:var(--ink);background:rgba(255,255,255,.08)}
+    .tag.booked{border-color:rgba(34,197,94,.45);color:#bbf7d0;background:rgba(34,197,94,.12)}
+    .tag.closed{border-color:rgba(255,255,255,.20);color:var(--muted);background:rgba(255,255,255,.06)}
+
+    .thumb{
+      width:48px;height:36px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+    }
+
+    .galleryGrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+      gap:10px;
+      margin-top:10px;
+    }
+    .galleryItem{
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.20);
+      padding:8px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .galleryItem img{
+      width:100%;
+      height:88px;
+      border-radius:10px;
+      object-fit:cover;
+      background: rgba(255,255,255,.06);
+    }
+    .galleryActions{display:flex;gap:6px;flex-wrap:wrap}
+    .galleryActions .btn{padding:6px 10px;font-size:10px}
+    .btn-mini{padding:6px 10px;font-size:10px}
 
     /* Modal */
     .backdrop{
@@ -285,8 +336,47 @@
       </div>
 
       <!-- DASH -->
-      <div class="grid hidden" id="dashView">
-        <div class="card">
+      <div class="hidden" id="dashView">
+        <div class="kpis" id="kpiRow">
+          <div class="kpi">
+            <div class="t">Total inventory</div>
+            <div class="v" id="kTotal">0</div>
+            <div class="s">Vehicles listed</div>
+          </div>
+          <div class="kpi">
+            <div class="t">Available</div>
+            <div class="v" id="kAvailable">0</div>
+            <div class="s">Ready for sale</div>
+          </div>
+          <div class="kpi">
+            <div class="t">Pending</div>
+            <div class="v" id="kPending">0</div>
+            <div class="s">In negotiation</div>
+          </div>
+          <div class="kpi">
+            <div class="t">Sold</div>
+            <div class="v" id="kSold">0</div>
+            <div class="s">Closed sales</div>
+          </div>
+          <div class="kpi">
+            <div class="t">Total requests</div>
+            <div class="v" id="kRequests">0</div>
+            <div class="s">Leads received</div>
+          </div>
+          <div class="kpi">
+            <div class="t">New today</div>
+            <div class="v" id="kNewToday">0</div>
+            <div class="s">Requests today</div>
+          </div>
+          <div class="kpi">
+            <div class="t">Booked</div>
+            <div class="v" id="kBooked">0</div>
+            <div class="s">Confirmed viewings</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
           <h3>Controls</h3>
           <div class="hint">Search / filter your inventory.</div>
 
@@ -325,7 +415,7 @@
           <div class="statusline" id="dashStatus"></div>
         </div>
 
-        <div class="table">
+          <div class="table">
           <div class="thead">
             <div>
               <div class="t">Your vehicles</div>
@@ -342,12 +432,69 @@
                   <th>Specs</th>
                   <th>Status</th>
                   <th>Price</th>
-                  <th>Photos</th>
+                  <th>Media</th>
                 </tr>
               </thead>
               <tbody id="tbody"></tbody>
             </table>
           </div>
+          </div>
+        </div>
+
+        <div class="card" id="requestsCard" style="margin-top:14px">
+          <h3>Requests</h3>
+          <div class="hint">Track new leads and update their status.</div>
+
+          <div class="row two" style="margin-top:10px">
+            <div class="field">
+              <div class="label"><span>Status</span><span>Filter</span></div>
+              <select class="select" id="leadStatusFilter">
+                <option value="">All</option>
+                <option value="new">New</option>
+                <option value="booked">Booked</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+            <div class="field">
+              <div class="label"><span>Date range</span><span>Filter</span></div>
+              <div class="row two">
+                <input class="input" id="leadStart" type="date" />
+                <input class="input" id="leadEnd" type="date" />
+              </div>
+            </div>
+          </div>
+
+          <div class="footerBtns" style="justify-content:flex-start">
+            <button class="btn" id="btnLeadsRefresh" type="button">Refresh requests</button>
+            <button class="btn" id="btnExportLeads" type="button">Export CSV</button>
+          </div>
+
+          <div class="table" style="margin-top:10px">
+            <div class="thead">
+              <div>
+                <div class="t">Incoming requests</div>
+                <div class="m">Showing <span id="leadCount">0</span> requests</div>
+              </div>
+              <div class="m" id="leadUpdated">—</div>
+            </div>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Vehicle</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="leadBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="statusline" id="leadStatus"></div>
         </div>
       </div>
 
@@ -413,22 +560,24 @@
         <textarea class="textarea" id="vNotes" placeholder="Financing, trade-ins, condition, etc."></textarea>
       </div>
 
+      <div class="field">
+        <div class="label"><span>Hero video URL</span><span>Optional</span></div>
+        <input class="input" id="vHeroVideo" placeholder="https://..." />
+      </div>
+
       <div class="card" style="margin-top:12px">
         <h3>Photos</h3>
-        <div class="hint">We upload to Cloudinary and save returned <span class="mono">secure_url</span> to Sheets.</div>
+        <div class="hint">Upload up to 7 images. Set the hero image for storefront display.</div>
 
         <div class="row two">
           <div class="field">
-            <div class="label"><span>Choose files</span><span>Images</span></div>
+            <div class="label"><span>Choose files</span><span>Images (max 7)</span></div>
             <input class="input" id="files" type="file" multiple accept="image/*">
           </div>
-          <div class="field">
-            <div class="label"><span>Hero photo</span><span>Optional</span></div>
-            <select class="select" id="heroPick">
-              <option value="auto">Auto (first photo)</option>
-            </select>
-          </div>
         </div>
+
+        <div class="galleryGrid" id="galleryGrid"></div>
+        <input class="hidden" id="replaceFile" type="file" accept="image/*" />
 
         <div class="statusline" id="uploadLine"></div>
       </div>
@@ -449,6 +598,8 @@
   const API = {
     login: () => "/api/dealer/login",
     vehicles: () => "/api/dealer/vehicles",
+    leads: () => "/api/dealer/leads",
+    leadStatus: () => "/api/dealer/leads/status",
     config: () => "/api/public/config",
 
     // NEW: Signed Cloudinary params endpoint (you add this server route)
@@ -476,6 +627,13 @@
 
     loginView: el("loginView"),
     dashView: el("dashView"),
+    kTotal: el("kTotal"),
+    kAvailable: el("kAvailable"),
+    kPending: el("kPending"),
+    kSold: el("kSold"),
+    kRequests: el("kRequests"),
+    kNewToday: el("kNewToday"),
+    kBooked: el("kBooked"),
 
     dealerId: el("dealerId"),
     passcode: el("passcode"),
@@ -511,10 +669,22 @@
     vPrice: el("vPrice"),
     vTitle: el("vTitle"),
     vNotes: el("vNotes"),
+    vHeroVideo: el("vHeroVideo"),
 
     files: el("files"),
-    heroPick: el("heroPick"),
+    galleryGrid: el("galleryGrid"),
+    replaceFile: el("replaceFile"),
     uploadLine: el("uploadLine"),
+
+    leadStatusFilter: el("leadStatusFilter"),
+    leadStart: el("leadStart"),
+    leadEnd: el("leadEnd"),
+    btnLeadsRefresh: el("btnLeadsRefresh"),
+    btnExportLeads: el("btnExportLeads"),
+    leadCount: el("leadCount"),
+    leadUpdated: el("leadUpdated"),
+    leadBody: el("leadBody"),
+    leadStatus: el("leadStatus"),
 
     toast: el("toast"),
     toastDot: el("toastDot"),
@@ -526,8 +696,10 @@
     dealerId: null,
     dealerName: null,
     vehicles: [],
+    leads: [],
     editing: null,
     demo: false,
+    replacingIndex: null,
 
     // If server signed endpoint is missing, we'll flip this on and use unsigned preset.
     unsignedFallback: false,
@@ -558,7 +730,14 @@
     ui.backdrop.addEventListener("click", (e)=>{ if(e.target===ui.backdrop) closeModal(); });
 
     ui.btnSave.addEventListener("click", saveVehicleAndUpload);
-    ui.files.addEventListener("change", refreshHeroPicker);
+    ui.files.addEventListener("change", handleNewFiles);
+    ui.replaceFile.addEventListener("change", handleReplaceFile);
+
+    ui.btnLeadsRefresh.addEventListener("click", loadLeads);
+    ui.btnExportLeads.addEventListener("click", exportLeads);
+    ui.leadStatusFilter.addEventListener("change", renderLeads);
+    ui.leadStart.addEventListener("change", renderLeads);
+    ui.leadEnd.addEventListener("change", renderLeads);
   }
 
   async function loadConfig(){
@@ -657,6 +836,7 @@
     state.dealerId = null;
     state.dealerName = null;
     state.vehicles = [];
+    state.leads = [];
     state.demo = false;
     state.unsignedFallback = false;
 
@@ -682,12 +862,14 @@
     ui.topTitle.textContent = state.dealerName || "Dealer Portal";
     ui.topSub.textContent = `${state.dealerId || ""} · inventory & media`;
     loadVehicles();
+    loadLeads();
   }
 
   async function loadVehicles(){
     ui.dashStatus.textContent = state.demo ? "Demo inventory loaded." : "Loading vehicles…";
     if(state.demo){
       ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
+      updateKpis();
       render();
       return;
     }
@@ -706,12 +888,66 @@
       ui.dashStatus.textContent = "Ready.";
       ui.lastUpdated.textContent = "Updated: " + fmt(new Date());
       setApi("Live", "on");
+      updateKpis();
       render();
     }catch(e){
       ui.dashStatus.textContent = String(e?.message || "Could not load vehicles.");
       setApi("Error", "err");
       toast("Failed to load inventory.", "error");
     }
+  }
+
+  async function loadLeads(){
+    ui.leadStatus.textContent = state.demo ? "Demo requests loaded." : "Loading requests…";
+    if(state.demo){
+      state.leads = demoLeads();
+      ui.leadUpdated.textContent = "Updated: " + fmt(new Date());
+      updateKpis();
+      renderLeads();
+      return;
+    }
+
+    try{
+      const res = await fetch(API.leads(), {
+        headers:{
+          "Accept":"application/json",
+          "Authorization":"Bearer " + state.token
+        }
+      });
+      const data = await res.json().catch(()=>null);
+      if(!res.ok || !data || data.ok !== true) throw new Error(data?.error || "Failed to load leads");
+
+      state.leads = Array.isArray(data.leads) ? data.leads : [];
+      ui.leadStatus.textContent = "Ready.";
+      ui.leadUpdated.textContent = "Updated: " + fmt(new Date());
+      updateKpis();
+      renderLeads();
+    }catch(e){
+      ui.leadStatus.textContent = String(e?.message || "Could not load leads.");
+      toast("Failed to load leads.", "error");
+    }
+  }
+
+  function updateKpis(){
+    const total = state.vehicles.length;
+    const available = state.vehicles.filter(v => v.status === "available").length;
+    const pending = state.vehicles.filter(v => v.status === "pending").length;
+    const sold = state.vehicles.filter(v => v.status === "sold").length;
+
+    const totalLeads = state.leads.length;
+    const booked = state.leads.filter(l => (l.status||"").toLowerCase() === "booked").length;
+
+    const today = new Date();
+    const todayKey = today.toISOString().slice(0, 10);
+    const newToday = state.leads.filter(l => String(l.createdAt || "").slice(0,10) === todayKey).length;
+
+    ui.kTotal.textContent = String(total);
+    ui.kAvailable.textContent = String(available);
+    ui.kPending.textContent = String(pending);
+    ui.kSold.textContent = String(sold);
+    ui.kRequests.textContent = String(totalLeads);
+    ui.kNewToday.textContent = String(newToday);
+    ui.kBooked.textContent = String(booked);
   }
 
   function render(){
@@ -767,12 +1003,136 @@
       td4.innerHTML = `<div style="font-weight:900">${money(v.price)}</div>`;
 
       const td5 = document.createElement("td");
-      td5.innerHTML = `<div>${(v.images||[]).length} photos</div>
-                       <div style="color:var(--muted);font-size:11px;margin-top:2px">${v.heroImage ? "Hero set" : "No hero"}</div>`;
+      const hero = v.heroImage || (Array.isArray(v.images) ? v.images[0] : "");
+      td5.innerHTML = hero
+        ? `<img class="thumb" src="${esc(hero)}" alt="Vehicle thumbnail" referrerpolicy="no-referrer" />
+           <div style="color:var(--muted);font-size:11px;margin-top:4px">${(v.images||[]).length} photos</div>`
+        : `<div>${(v.images||[]).length} photos</div>
+           <div style="color:var(--muted);font-size:11px;margin-top:2px">${v.heroImage ? "Hero set" : "No hero"}</div>`;
 
       tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5);
       ui.tbody.appendChild(tr);
     });
+  }
+
+  function getFilteredLeads(){
+    const status = (ui.leadStatusFilter.value || "").toLowerCase();
+    const start = ui.leadStart.value ? new Date(ui.leadStart.value) : null;
+    const end = ui.leadEnd.value ? new Date(ui.leadEnd.value) : null;
+
+    return state.leads.filter((l) => {
+      if(status && String(l.status || "").toLowerCase() !== status) return false;
+      if(start || end){
+        const created = l.createdAt ? new Date(l.createdAt) : null;
+        if(start && created && created < start) return false;
+        if(end && created && created > new Date(end.getTime() + 86400000)) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderLeads(){
+    const list = getFilteredLeads();
+    ui.leadBody.innerHTML = "";
+    ui.leadCount.textContent = String(list.length);
+
+    if(!list.length){
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.style.color = "var(--muted)";
+      td.style.padding = "14px";
+      td.textContent = "No requests match your filters.";
+      tr.appendChild(td);
+      ui.leadBody.appendChild(tr);
+      return;
+    }
+
+    list.forEach((l) => {
+      const tr = document.createElement("tr");
+
+      tr.appendChild(cell(`<div style="font-weight:900">${esc(l.name || "—")}</div><div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(l.phone || "")}</div>`));
+      tr.appendChild(cell(`<div class="mono">${esc(l.vehicleId || "—")}</div>`));
+      tr.appendChild(cell(`<span class="tag ${esc((l.type || "lead").toLowerCase())}">${esc(l.type || "lead")}</span>`));
+      tr.appendChild(cell(`<span class="tag ${esc((l.status || "new").toLowerCase())}">${esc(l.status || "new")}</span>`));
+      tr.appendChild(cell(`<span class="mono">${esc(l.createdAt || "")}</span>`));
+
+      const actions = document.createElement("td");
+      const bookedBtn = document.createElement("button");
+      bookedBtn.className = "btn btn-mini";
+      bookedBtn.textContent = "Mark booked";
+      bookedBtn.disabled = String(l.status || "").toLowerCase() === "booked";
+      bookedBtn.onclick = () => updateLeadStatus(l.leadId, "booked");
+
+      const closedBtn = document.createElement("button");
+      closedBtn.className = "btn btn-mini";
+      closedBtn.textContent = "Close";
+      closedBtn.disabled = String(l.status || "").toLowerCase() === "closed";
+      closedBtn.onclick = () => updateLeadStatus(l.leadId, "closed");
+
+      actions.appendChild(bookedBtn);
+      actions.appendChild(closedBtn);
+      tr.appendChild(actions);
+
+      ui.leadBody.appendChild(tr);
+    });
+  }
+
+  async function updateLeadStatus(leadId, status){
+    if(!leadId || !status) return;
+    ui.leadStatus.textContent = "Updating status…";
+
+    try{
+      if(state.demo){
+        const idx = state.leads.findIndex(l => l.leadId === leadId);
+        if(idx > -1) state.leads[idx].status = status;
+        ui.leadStatus.textContent = "Status updated (demo).";
+        updateKpis();
+        renderLeads();
+        return;
+      }
+
+      const res = await fetch(API.leadStatus(), {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Accept":"application/json",
+          "Authorization":"Bearer " + state.token
+        },
+        body: JSON.stringify({ leadId, status })
+      });
+      const data = await res.json().catch(()=>null);
+      if(!res.ok || !data || data.ok !== true) throw new Error(data?.error || "Status update failed");
+
+      const idx = state.leads.findIndex(l => l.leadId === leadId);
+      if(idx > -1) state.leads[idx] = { ...state.leads[idx], status };
+      ui.leadStatus.textContent = "Status updated.";
+      updateKpis();
+      renderLeads();
+    }catch(e){
+      ui.leadStatus.textContent = "Failed to update status.";
+      toast("Status update failed.", "error");
+    }
+  }
+
+  function exportLeads(){
+    const list = getFilteredLeads();
+    if(!list.length){
+      toast("No requests to export.", "error");
+      return;
+    }
+    const headers = ["createdAt","leadId","vehicleId","type","name","phone","email","preferredDate","preferredTime","notes","source","status"];
+    const rows = list.map(l => headers.map(h => String(l[h] ?? "")));
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v.replaceAll('"','""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${state.dealerId || "dealer"}_leads.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   function openModal(v){
@@ -790,9 +1150,20 @@
     ui.vPrice.value = v?.price || "";
     ui.vTitle.value = v?.title || "";
     ui.vNotes.value = v?.notes || "";
+    ui.vHeroVideo.value = v?.heroVideo || "";
     ui.files.value = "";
+    ui.replaceFile.value = "";
+    state.replacingIndex = null;
 
-    refreshHeroPicker(v?.images || []);
+    if(!state.editing){
+      state.editing = {
+        images: [],
+        heroImage: "",
+        heroVideo: ""
+      };
+    }
+    if(!Array.isArray(state.editing.images)) state.editing.images = [];
+    renderGallery();
     ui.backdrop.classList.add("show");
     ui.backdrop.setAttribute("aria-hidden","false");
   }
@@ -803,29 +1174,117 @@
     state.editing = null;
   }
 
-  function refreshHeroPicker(existingImages){
-    const imgs = Array.isArray(existingImages) ? existingImages.slice() : [];
+  function renderGallery(){
+    ui.galleryGrid.innerHTML = "";
+    const images = Array.isArray(state.editing?.images) ? state.editing.images : [];
+    if(images.length && !state.editing.heroImage){
+      state.editing.heroImage = images[0];
+    }
+    if(!images.length){
+      const empty = document.createElement("div");
+      empty.className = "hint";
+      empty.textContent = "No images yet. Upload up to 7 photos.";
+      ui.galleryGrid.appendChild(empty);
+      return;
+    }
+
+    images.forEach((url, index) => {
+      const item = document.createElement("div");
+      item.className = "galleryItem";
+
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = `Vehicle image ${index + 1}`;
+      img.referrerPolicy = "no-referrer";
+      img.loading = "lazy";
+
+      const actions = document.createElement("div");
+      actions.className = "galleryActions";
+
+      const heroBtn = document.createElement("button");
+      heroBtn.className = "btn btn-mini";
+      heroBtn.textContent = state.editing.heroImage === url ? "Hero ✓" : "Set hero";
+      heroBtn.onclick = () => {
+        state.editing.heroImage = url;
+        renderGallery();
+      };
+
+      const replaceBtn = document.createElement("button");
+      replaceBtn.className = "btn btn-mini";
+      replaceBtn.textContent = "Replace";
+      replaceBtn.onclick = () => {
+        state.replacingIndex = index;
+        ui.replaceFile.click();
+      };
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "btn btn-mini";
+      removeBtn.textContent = "Remove";
+      removeBtn.onclick = () => {
+        state.editing.images.splice(index, 1);
+        if(state.editing.heroImage === url){
+          state.editing.heroImage = state.editing.images[0] || "";
+        }
+        renderGallery();
+      };
+
+      actions.appendChild(heroBtn);
+      actions.appendChild(replaceBtn);
+      actions.appendChild(removeBtn);
+
+      item.appendChild(img);
+      item.appendChild(actions);
+      ui.galleryGrid.appendChild(item);
+    });
+  }
+
+  function handleNewFiles(){
+    const existingCount = Array.isArray(state.editing?.images) ? state.editing.images.length : 0;
     const newFiles = ui.files.files ? Array.from(ui.files.files) : [];
+    const total = existingCount + newFiles.length;
+    if(total > 7){
+      setMStatus("You can upload up to 7 images per vehicle.", true);
+    } else {
+      setMStatus("", false);
+    }
+  }
 
-    ui.heroPick.innerHTML = "";
-    const optAuto = document.createElement("option");
-    optAuto.value = "auto";
-    optAuto.textContent = "Auto (first photo)";
-    ui.heroPick.appendChild(optAuto);
+  async function handleReplaceFile(){
+    const file = ui.replaceFile.files && ui.replaceFile.files[0];
+    if(!file || state.replacingIndex == null) return;
+    if(state.demo){
+      state.editing.images[state.replacingIndex] = URL.createObjectURL(file);
+      state.replacingIndex = null;
+      ui.replaceFile.value = "";
+      renderGallery();
+      return;
+    }
 
-    imgs.forEach((u, i)=>{
-      const o = document.createElement("option");
-      o.value = "existing:" + i;
-      o.textContent = `Existing #${i+1}`;
-      ui.heroPick.appendChild(o);
-    });
+    const vehicleId = (ui.vId.value || "").trim();
+    if(!vehicleId && !state.editing?.vehicleId){
+      setMStatus("Save the vehicle first to replace images.", true);
+      ui.replaceFile.value = "";
+      state.replacingIndex = null;
+      return;
+    }
 
-    newFiles.forEach((f, i)=>{
-      const o = document.createElement("option");
-      o.value = "new:" + i;
-      o.textContent = `New: ${f.name}`;
-      ui.heroPick.appendChild(o);
-    });
+    try{
+      ui.uploadLine.textContent = "Replacing image…";
+      const signer = await getCloudinarySigner(vehicleId || state.editing.vehicleId);
+      const url = await uploadOneToCloudinary(file, signer);
+      state.editing.images[state.replacingIndex] = url;
+      if(!state.editing.heroImage){
+        state.editing.heroImage = url;
+      }
+      ui.uploadLine.textContent = "Image replaced.";
+      renderGallery();
+    }catch(e){
+      ui.uploadLine.textContent = "Replace failed.";
+      toast("Replace failed.", "error");
+    }finally{
+      ui.replaceFile.value = "";
+      state.replacingIndex = null;
+    }
   }
 
   // ✅ Main flow:
@@ -848,6 +1307,13 @@
       return;
     }
 
+    const newFiles = ui.files.files ? Array.from(ui.files.files) : [];
+    const existingImages = Array.isArray(payload.images) ? payload.images : [];
+    if(existingImages.length + newFiles.length > 7){
+      setMStatus("Maximum 7 images allowed per vehicle.", true);
+      return;
+    }
+
     ui.btnSave.disabled = true;
     ui.uploadLine.textContent = "";
     setMStatus("Saving…", false);
@@ -863,33 +1329,30 @@
         price: payload.price,
         status: payload.status,
         notes: payload.notes,
-        images: payload.images || [],
+        images: existingImages,
         heroImage: payload.heroImage || "",
+        heroVideo: payload.heroVideo || "",
       });
 
-      const files = ui.files.files ? Array.from(ui.files.files) : [];
       let uploadedUrls = [];
 
-      if(files.length && !state.demo){
-        ui.uploadLine.textContent = `Uploading ${files.length} photo(s)…`;
+      if(newFiles.length && !state.demo){
+        ui.uploadLine.textContent = `Uploading ${newFiles.length} photo(s)…`;
 
         // (2) Ask server for signed upload params (recommended)
         // If endpoint not available, fallback to unsigned preset upload (needs CLOUDINARY_UPLOAD_PRESET)
         const signer = await getCloudinarySigner(savedBase.vehicleId);
 
         // (3) Upload
-        uploadedUrls = await uploadFilesToCloudinary(savedBase.vehicleId, files, signer);
+        uploadedUrls = await uploadFilesToCloudinary(savedBase.vehicleId, newFiles, signer);
       }
 
-      const existingImages = Array.isArray(payload.images) ? payload.images : [];
-      const mergedImages = [...existingImages, ...uploadedUrls].filter(Boolean);
+      const mergedImages = [...existingImages, ...uploadedUrls].filter(Boolean).slice(0, 7);
 
       // (4) Hero selection + auto
-      const heroImage = pickHero({
-        heroPick: ui.heroPick.value,
-        existingImages,
-        newUploaded: uploadedUrls
-      }) || (mergedImages[0] || "");
+      let heroImage = payload.heroImage || "";
+      if(heroImage && !mergedImages.includes(heroImage)) heroImage = "";
+      if(!heroImage) heroImage = mergedImages[0] || "";
 
       // Save final URLs to Sheets
       await saveVehicle({
@@ -902,10 +1365,13 @@
         status: payload.status,
         notes: payload.notes,
         images: mergedImages,
-        heroImage: heroImage
+        heroImage: heroImage,
+        heroVideo: payload.heroVideo || ""
       });
 
-      toast(files.length ? "Vehicle saved + photos uploaded." : "Vehicle saved.", "success");
+      state.editing.images = mergedImages;
+      state.editing.heroImage = heroImage;
+      toast(newFiles.length ? "Vehicle saved + photos uploaded." : "Vehicle saved.", "success");
       closeModal();
       await loadVehicles();
     }catch(e){
@@ -927,6 +1393,7 @@
       price: num(ui.vPrice.value),
       title: (ui.vTitle.value || "").trim(),
       notes: (ui.vNotes.value || "").trim(),
+      heroVideo: (ui.vHeroVideo.value || "").trim(),
       images: Array.isArray(state.editing?.images) ? state.editing.images : [],
       heroImage: (state.editing?.heroImage || "")
     };
@@ -1082,21 +1549,6 @@
     return out;
   }
 
-  function pickHero({ heroPick, existingImages, newUploaded }){
-    if(heroPick === "auto"){
-      return (newUploaded[0] || existingImages[0] || "");
-    }
-    if(heroPick.startsWith("existing:")){
-      const idx = Number(heroPick.split(":")[1]||0);
-      return existingImages[idx] || "";
-    }
-    if(heroPick.startsWith("new:")){
-      const idx = Number(heroPick.split(":")[1]||0);
-      return newUploaded[idx] || (newUploaded[0]||"");
-    }
-    return "";
-  }
-
   function setApi(text, mode){
     ui.apiText.textContent = text || "—";
     ui.apiDot.classList.remove("on","err");
@@ -1122,6 +1574,12 @@
     window.__t = setTimeout(()=>ui.toast.classList.remove("show"), 3200);
   }
 
+  function cell(html){
+    const td = document.createElement("td");
+    td.innerHTML = html;
+    return td;
+  }
+
   function normalize(list){
     return (list||[]).map(v => ({
       vehicleId: v.vehicleId || genVehicleId(),
@@ -1134,6 +1592,7 @@
       status: (v.status || "available").toLowerCase(),
       notes: v.notes || "",
       heroImage: v.heroImage || "",
+      heroVideo: v.heroVideo || "",
       images: Array.isArray(v.images) ? v.images : [],
       updatedAt: v.updatedAt || v.createdAt || new Date().toISOString(),
       createdAt: v.createdAt || v.updatedAt || new Date().toISOString()
@@ -1145,6 +1604,13 @@
       { vehicleId:"VEH-10021", make:"Toyota", model:"Vitz", year:2018, price:1250000, status:"available", notes:"Clean unit.", images:["https://example.com/a.jpg","https://example.com/b.jpg"], heroImage:"https://example.com/a.jpg" },
       { vehicleId:"VEH-10022", make:"Honda", model:"Civic", year:2017, price:2200000, status:"pending", notes:"Pending deposit.", images:["https://example.com/c.jpg"] },
     ]);
+  }
+
+  function demoLeads(){
+    return [
+      { createdAt: new Date().toISOString(), leadId:"lead_demo_1", vehicleId:"VEH-10021", type:"live_video", name:"Andre W.", phone:"876-555-0192", email:"", preferredDate:"", preferredTime:"", notes:"Need quick tour", source:"storefront", status:"new" },
+      { createdAt: new Date(Date.now()-3600*1000*10).toISOString(), leadId:"lead_demo_2", vehicleId:"VEH-10022", type:"walk_in", name:"Kiera M.", phone:"876-555-0113", email:"", preferredDate:"", preferredTime:"", notes:"Book afternoon slot", source:"storefront", status:"booked" },
+    ];
   }
 
   function blob(v){
