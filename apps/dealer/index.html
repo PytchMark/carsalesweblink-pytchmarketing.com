@@ -293,7 +293,7 @@
           <span class="dot" id="apiDot"></span>
           <span id="apiText">Offline</span>
         </div>
-        <a class="btn" href="/">Storefront ↗</a>
+        <a class="btn" id="storefrontLink" href="/storefront">Storefront ↗</a>
         <button class="btn" id="btnLogout" type="button">Logout ⎋</button>
       </div>
     </div>
@@ -307,8 +307,8 @@
 
           <div class="row two" style="margin-top:10px">
             <div class="field">
-              <div class="label"><span>Dealer ID</span><span>Required</span></div>
-              <input class="input" id="dealerId" placeholder="DEALER-0001" autocomplete="username">
+              <div class="label"><span>Dealer ID</span><span>Format: AA123</span></div>
+              <input class="input" id="dealerId" placeholder="AA123" maxlength="5" autocomplete="username">
             </div>
             <div class="field">
               <div class="label"><span>Passcode</span><span>Required</span></div>
@@ -624,6 +624,7 @@
     apiDot: el("apiDot"),
     apiText: el("apiText"),
     btnLogout: el("btnLogout"),
+    storefrontLink: el("storefrontLink"),
 
     loginView: el("loginView"),
     dashView: el("dashView"),
@@ -789,6 +790,10 @@
       setLoginStatus("Enter Dealer ID + passcode.", true);
       return;
     }
+    if(!isValidDealerId(dealerId)){
+      setLoginStatus("Dealer ID must be two letters followed by three numbers.", true);
+      return;
+    }
     setLoginStatus("Signing in…", false);
 
     try{
@@ -822,7 +827,7 @@
   function enterDemo(){
     state.demo = true;
     state.token = "demo-token";
-    state.dealerId = "DEALER-0001";
+    state.dealerId = "AA123";
     state.dealerName = "Demo Dealer";
     state.vehicles = demoVehicles();
     setApi("Demo", "off");
@@ -849,6 +854,7 @@
     ui.btnLogout.disabled = true;
     ui.topTitle.textContent = "Dealer Portal";
     ui.topSub.textContent = "Log in to manage inventory + photos.";
+    ui.storefrontLink.href = "/storefront";
     setLoginStatus("", false);
     setApi("Offline", "err");
     toast("Logged out.", "success");
@@ -861,6 +867,9 @@
 
     ui.topTitle.textContent = state.dealerName || "Dealer Portal";
     ui.topSub.textContent = `${state.dealerId || ""} · inventory & media`;
+    if(state.dealerId){
+      ui.storefrontLink.href = `/storefront/${encodeURIComponent(state.dealerId)}`;
+    }
     loadVehicles();
     loadLeads();
   }
@@ -1639,6 +1648,9 @@
     if(v === "" || v == null) return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
+  }
+  function isValidDealerId(v){
+    return /^[A-Za-z]{2}\d{3}$/.test(String(v || "").trim());
   }
   function genVehicleId(){
     return "VEH-" + Math.random().toString(16).slice(2,8).toUpperCase();

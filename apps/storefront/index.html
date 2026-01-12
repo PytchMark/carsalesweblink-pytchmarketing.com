@@ -123,6 +123,33 @@
 
     .btn-sm{padding:9px 12px;font-size:12px}
 
+    .dealerGate{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:12px 14px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.86);
+      box-shadow: var(--shadow2);
+    }
+    .dealerGate .title{
+      font-weight:850;
+      font-size:13px;
+    }
+    .dealerGate .hint{
+      font-size:11px;
+      color: var(--muted);
+    }
+    .dealerGate .group{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      flex:1 1 240px;
+    }
+
     /* Filters */
     .filters{
       display:flex;flex-wrap:wrap;gap:10px;
@@ -466,7 +493,19 @@
         </div>
       </header>
 
-      <section class="filters" aria-label="Inventory filters">
+      <section class="dealerGate" aria-label="Dealer access">
+        <div>
+          <div class="title">Enter dealer ID to view inventory</div>
+          <div class="hint">Use the format: <strong>AA123</strong> (two letters + three numbers).</div>
+        </div>
+        <div class="group">
+          <input class="input" id="dealerInput" placeholder="AA123" maxlength="5" />
+          <button class="btn btn-sm" id="btnDealerGo" type="button">Load dealer</button>
+          <button class="btn btn-ghost btn-sm" id="btnDealerClear" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="filters" id="filters" aria-label="Inventory filters">
         <div class="fg">
           <div class="lbl">Search</div>
           <input class="input" id="fSearch" placeholder="Make, model, title, notes…" />
@@ -512,7 +551,7 @@
         </div>
       </section>
 
-      <section class="kpis" aria-label="Inventory stats">
+      <section class="kpis" id="kpis" aria-label="Inventory stats">
         <div class="kpi">
           <div class="t">Vehicles in view</div>
           <div class="v" id="kTotal">–</div>
@@ -535,7 +574,7 @@
         </div>
       </section>
 
-      <div class="sectionHead" aria-label="Inventory results header">
+      <div class="sectionHead" id="resultsHead" aria-label="Inventory results header">
         <div class="left">
           <h2>Available Vehicles</h2>
           <p>Tap a vehicle to request a video walkthrough or a live viewing.</p>
@@ -547,8 +586,8 @@
 
       <section>
         <div id="invalidLink" class="errorState" style="display:none">
-          <div style="font-weight:850;color:var(--ink);margin-bottom:6px">Invalid dealer link</div>
-          This storefront link is missing a dealer ID. Please request a valid dealer link.
+          <div style="font-weight:850;color:var(--ink);margin-bottom:6px">Enter a dealer ID to view inventory</div>
+          Once you enter a valid dealer ID (AA123), vehicles for that dealer will appear here.
         </div>
         <div id="grid" class="grid"></div>
         <div id="empty" class="empty" style="display:none">
@@ -647,6 +686,7 @@
     function norm(s){ return String(s || "").trim().toLowerCase(); }
     function isHttpUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
     function digitsOnly(s){ return String(s || "").replace(/\\D+/g, ""); }
+    function isValidDealerId(v){ return /^[A-Za-z]{2}\\d{3}$/.test(String(v || "").trim()); }
     function esc(s){
       return String(s ?? "")
         .replaceAll("&","&amp;")
@@ -684,14 +724,23 @@
 
     function parseDealerFromUrl(){
       const u = new URL(location.href);
-      const pathMatch = u.pathname.match(/^\/d\/([^/]+)/i);
+      const pathMatch = u.pathname.match(/^\/storefront\/([^/]+)$/i);
+      const legacyMatch = u.pathname.match(/^\/d\/([^/]+)$/i);
       const d = (pathMatch && pathMatch[1]) ? decodeURIComponent(pathMatch[1]) : "";
+      const legacy = (legacyMatch && legacyMatch[1]) ? decodeURIComponent(legacyMatch[1]) : "";
       const fromQuery = u.searchParams.get("dealerId") || "";
-      const dealerId = (d || fromQuery || "").trim();
+      const dealerId = (d || legacy || fromQuery || "").trim().toUpperCase();
       const vehicleId = u.searchParams.get("vehicleId") || "";
       currentDealerId = dealerId;
+      qs("dealerInput").value = dealerId || "";
       if (vehicleId) qs("fSearch").value = vehicleId;
       return dealerId;
+    }
+
+    function setDealerVisibility(hasDealer){
+      qs("filters").style.display = hasDealer ? "flex" : "none";
+      qs("kpis").style.display = hasDealer ? "grid" : "none";
+      qs("resultsHead").style.display = hasDealer ? "flex" : "none";
     }
 
     function setLoadingSkeleton(){
@@ -742,7 +791,11 @@
     }
 
     async function loadDealerProfile(){
-      if (!currentDealerId) return null;
+      if (!currentDealerId || !isValidDealerId(currentDealerId)) {
+        dealerProfile = null;
+        applyDealerBranding();
+        return null;
+      }
       try{
         const url = new URL("/api/public/dealer", location.origin);
         url.searchParams.set("dealerId", currentDealerId);
@@ -760,6 +813,14 @@
 
     function applyDealerBranding(){
       const badge = qs("dealerLogo");
+      if (!currentDealerId){
+        badge.textContent = "C";
+        qs("storeTitle").textContent = "Carsales Storefront";
+        qs("storeSub").textContent = "Enter a dealer ID to view available inventory.";
+        qs("dealerPill").textContent = "Dealer";
+        qs("whatsAppBtn").style.display = "none";
+        return;
+      }
       if (dealerProfile?.logoUrl && isHttpUrl(dealerProfile.logoUrl)){
         badge.innerHTML = `<img src="${dealerProfile.logoUrl}" alt="${esc(dealerProfile.name || "Dealer logo")}" />`;
       } else {
@@ -784,7 +845,15 @@
       const dealerId = currentDealerId;
       qs("dealerPill").textContent = dealerProfile?.name ? dealerProfile.name : (dealerId || "Dealer");
       qs("invalidLink").style.display = dealerId ? "none" : "block";
+      setDealerVisibility(!!dealerId);
       if (!dealerId){
+        allVehicles = [];
+        render([]);
+        return;
+      }
+      if (!isValidDealerId(dealerId)){
+        qs("invalidLink").style.display = "block";
+        setDealerVisibility(false);
         allVehicles = [];
         render([]);
         return;
@@ -1188,6 +1257,33 @@
     // --------- Wire UI ----------
     qs("btnRefresh").onclick = loadInventory;
     qs("btnApply").onclick = applyFilters;
+    qs("btnDealerGo").onclick = async ()=>{
+      const value = (qs("dealerInput").value || "").trim().toUpperCase();
+      if (!isValidDealerId(value)){
+        showToast("Dealer ID must be two letters + three numbers (AA123).", false);
+        return;
+      }
+      currentDealerId = value;
+      const next = `${location.origin}/storefront/${encodeURIComponent(value)}`;
+      window.history.replaceState({}, "", next);
+      await loadDealerProfile();
+      await loadInventory();
+    };
+    qs("dealerInput").addEventListener("keydown", (e)=>{
+      if(e.key === "Enter") qs("btnDealerGo").click();
+    });
+    qs("dealerInput").addEventListener("input", (e)=>{
+      const v = e.target.value || "";
+      e.target.value = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0,5);
+    });
+    qs("btnDealerClear").onclick = ()=>{
+      currentDealerId = "";
+      qs("dealerInput").value = "";
+      dealerProfile = null;
+      applyDealerBranding();
+      window.history.replaceState({}, "", "/storefront");
+      loadInventory();
+    };
 
     qs("btnClear").onclick = ()=>{
       qs("fSearch").value = "";

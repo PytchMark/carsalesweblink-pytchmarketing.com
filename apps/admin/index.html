@@ -504,8 +504,8 @@
 
             <div class="row two">
               <div class="field">
-                <div class="label"><span>Dealer ID</span><span>Required</span></div>
-                <input id="newDealerId" class="input" placeholder="dealerpytch" />
+              <div class="label"><span>Dealer ID</span><span>Format: AA123</span></div>
+              <input id="newDealerId" class="input" placeholder="AA123" maxlength="5" />
               </div>
               <div class="field">
                 <div class="label"><span>Status</span><span>Default</span></div>
@@ -710,8 +710,8 @@
             <input id="mDealerName" class="input" />
           </div>
           <div class="field">
-            <div class="label"><span>Dealer ID</span></div>
-            <input id="mDealerId" class="input" />
+          <div class="label"><span>Dealer ID</span><span>AA123</span></div>
+          <input id="mDealerId" class="input" maxlength="5" />
           </div>
         </div>
 
@@ -1271,6 +1271,10 @@
       state.dealerView.dealerId = ui.dealerSelect.value || dealers[0].dealerId;
     }
 
+    function isValidDealerId(v){
+      return /^[A-Za-z]{2}\d{3}$/.test(String(v || "").trim());
+    }
+
     function rangeDates(){
       const mode = ui.dealerRange.value;
       if(mode === "custom"){
@@ -1479,6 +1483,11 @@
         ui.mStatus.classList.add("error");
         return;
       }
+      if(!isValidDealerId(payload.dealerId)){
+        ui.mStatus.textContent = "Dealer ID must be two letters followed by three numbers.";
+        ui.mStatus.classList.add("error");
+        return;
+      }
 
       ui.mStatus.textContent = "Saving…";
       ui.mStatus.classList.remove("error");
@@ -1568,6 +1577,11 @@
         ui.dealerActionStatus.classList.add("error");
         return;
       }
+      if(!isValidDealerId(payload.dealerId)){
+        ui.dealerActionStatus.textContent = "Dealer ID must be two letters followed by three numbers.";
+        ui.dealerActionStatus.classList.add("error");
+        return;
+      }
 
       ui.dealerActionStatus.textContent = "Creating…";
       ui.dealerActionStatus.classList.remove("error");
@@ -1635,24 +1649,24 @@
       if(state.dealers.length) return;
 
       state.dealers = [
-        { name:"Pytch Motors", dealerId:"dealerpytch", status:"active", whatsapp:"8765550123", logoUrl:"", vehicleCount:12 },
-        { name:"Island Auto", dealerId:"DEALER-0002", status:"active", whatsapp:"8765550199", logoUrl:"", vehicleCount:7 },
-        { name:"Mobay Cars", dealerId:"DEALER-0003", status:"paused", whatsapp:"", logoUrl:"", vehicleCount:3 },
+        { name:"Pytch Motors", dealerId:"AA123", status:"active", whatsapp:"8765550123", logoUrl:"", vehicleCount:12 },
+        { name:"Island Auto", dealerId:"BB456", status:"active", whatsapp:"8765550199", logoUrl:"", vehicleCount:7 },
+        { name:"Mobay Cars", dealerId:"CC789", status:"paused", whatsapp:"", logoUrl:"", vehicleCount:3 },
       ];
 
-      state.demoPasscodes["dealerpytch"] = "123456";
+      state.demoPasscodes["AA123"] = "123456";
 
       state.vehicles = [
-        { vehicleId:"VEH-10021", dealerId:"dealerpytch", make:"Toyota", model:"Vitz", status:"available", price:1250000, updated: fmt(new Date(Date.now()-3600*1000*8)) },
-        { vehicleId:"VEH-10022", dealerId:"dealerpytch", make:"Honda", model:"Civic", status:"pending", price:2200000, updated: fmt(new Date(Date.now()-3600*1000*19)) },
-        { vehicleId:"VEH-10031", dealerId:"DEALER-0002", make:"Nissan", model:"Note", status:"available", price:1450000, updated: fmt(new Date(Date.now()-3600*1000*5)) },
-        { vehicleId:"VEH-10041", dealerId:"DEALER-0003", make:"BMW", model:"3 Series", status:"sold", price:3950000, updated: fmt(new Date(Date.now()-3600*1000*66)) },
+        { vehicleId:"VEH-10021", dealerId:"AA123", make:"Toyota", model:"Vitz", status:"available", price:1250000, updated: fmt(new Date(Date.now()-3600*1000*8)) },
+        { vehicleId:"VEH-10022", dealerId:"AA123", make:"Honda", model:"Civic", status:"pending", price:2200000, updated: fmt(new Date(Date.now()-3600*1000*19)) },
+        { vehicleId:"VEH-10031", dealerId:"BB456", make:"Nissan", model:"Note", status:"available", price:1450000, updated: fmt(new Date(Date.now()-3600*1000*5)) },
+        { vehicleId:"VEH-10041", dealerId:"CC789", make:"BMW", model:"3 Series", status:"sold", price:3950000, updated: fmt(new Date(Date.now()-3600*1000*66)) },
       ];
 
       state.requests = [
-        { customer:"Andre W.", phone:"876-555-0192", vehicleId:"VEH-10022", dealerId:"dealerpytch", status:"new", requested: fmt(new Date(Date.now()-3600*1000*2)) },
-        { customer:"Kiera M.", phone:"876-555-0113", vehicleId:"VEH-10021", dealerId:"dealerpytch", status:"booked", requested: fmt(new Date(Date.now()-3600*1000*10)) },
-        { customer:"Damien R.", phone:"876-555-0177", vehicleId:"VEH-10031", dealerId:"DEALER-0002", status:"closed", requested: fmt(new Date(Date.now()-3600*1000*30)) },
+        { customer:"Andre W.", phone:"876-555-0192", vehicleId:"VEH-10022", dealerId:"AA123", status:"new", requested: fmt(new Date(Date.now()-3600*1000*2)) },
+        { customer:"Kiera M.", phone:"876-555-0113", vehicleId:"VEH-10021", dealerId:"AA123", status:"booked", requested: fmt(new Date(Date.now()-3600*1000*10)) },
+        { customer:"Damien R.", phone:"876-555-0177", vehicleId:"VEH-10031", dealerId:"BB456", status:"closed", requested: fmt(new Date(Date.now()-3600*1000*30)) },
       ];
     }
 
