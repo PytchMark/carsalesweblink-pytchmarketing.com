@@ -276,8 +276,9 @@
         <div class="card">
           <h3>Photo storage</h3>
           <div class="hint">
-            Photos upload to <b>Cloudinary</b> using your upload preset + folder.<br>
-            Then we save the Cloudinary <span class="mono">secure_url</span> into Google Sheets for the storefront.
+            Photos upload to <b>Cloudinary</b>. We first request a <span class="mono">signed upload</span> from your server
+            (recommended), upload files, then save each <span class="mono">secure_url</span> into Google Sheets for the storefront.<br>
+            <span style="opacity:.85">If the signed endpoint isn’t set up yet, this UI can automatically fall back to unsigned preset uploads.</span>
           </div>
           <div class="statusline" id="cfgLine"></div>
         </div>
@@ -414,7 +415,7 @@
 
       <div class="card" style="margin-top:12px">
         <h3>Photos</h3>
-        <div class="hint">Uploads go to Cloudinary and we save the returned URLs.</div>
+        <div class="hint">We upload to Cloudinary and save returned <span class="mono">secure_url</span> to Sheets.</div>
 
         <div class="row two">
           <div class="field">
@@ -449,9 +450,15 @@
     login: () => "/api/dealer/login",
     vehicles: () => "/api/dealer/vehicles",
     config: () => "/api/public/config",
+
+    // NEW: Signed Cloudinary params endpoint (you add this server route)
+    // Expected response:
+    // { ok:true, mode:"signed", apiKey:"...", timestamp:123, signature:"...", folder:"..." }
+    // If you haven't added it yet, UI will fall back to unsigned preset uploads automatically.
+    cloudinarySign: () => "/api/dealer/cloudinary/sign",
   };
 
-  // Cloudinary config (loaded from server env)
+  // Cloudinary config (loaded from server env via /api/public/config)
   const CLOUD = {
     cloudName: "",
     uploadPreset: "",
@@ -520,7 +527,10 @@
     dealerName: null,
     vehicles: [],
     editing: null,
-    demo: false
+    demo: false,
+
+    // If server signed endpoint is missing, we'll flip this on and use unsigned preset.
+    unsignedFallback: false,
   };
 
   document.addEventListener("DOMContentLoaded", async () => {
@@ -556,13 +566,17 @@
       const res = await fetch(API.config(), { headers:{ "Accept":"application/json" } });
       const data = await res.json().catch(()=>null);
       if(!res.ok || !data || data.ok !== true) throw new Error("config load failed");
+
       CLOUD.cloudName = data.cloudinary?.cloudName || "";
       CLOUD.uploadPreset = data.cloudinary?.uploadPreset || "";
       CLOUD.baseFolder = data.cloudinary?.baseFolder || "mediaexclusive";
 
-      if(!CLOUD.cloudName || !CLOUD.uploadPreset){
-        ui.cfgLine.textContent = "Cloudinary config missing. Set CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET on Cloud Run.";
+      if(!CLOUD.cloudName){
+        ui.cfgLine.textContent = "Cloudinary config missing. Set CLOUDINARY_CLOUD_NAME on Cloud Run.";
         ui.cfgLine.classList.add("error");
+      } else if(!CLOUD.uploadPreset){
+        // Signed uploads don't require upload preset, but fallback unsigned does.
+        ui.cfgLine.textContent = `Cloudinary ready: ${CLOUD.cloudName} · folder: ${CLOUD.baseFolder} (upload preset missing — signed uploads required)`;
       } else {
         ui.cfgLine.textContent = `Cloudinary ready: ${CLOUD.cloudName} · folder: ${CLOUD.baseFolder}`;
       }
@@ -644,6 +658,8 @@
     state.dealerName = null;
     state.vehicles = [];
     state.demo = false;
+    state.unsignedFallback = false;
+
     localStorage.removeItem("dealer_token");
     localStorage.removeItem("dealer_id");
     localStorage.removeItem("dealer_name");
@@ -812,14 +828,23 @@
     });
   }
 
+  // ✅ Main flow:
+  // 1) Save vehicle first -> ensures vehicleId exists in Sheets
+  // 2) Request SIGNED upload params from server (recommended)
+  // 3) Upload images to Cloudinary -> get secure_url
+  // 4) Merge images, set hero automatically (or chosen), save again -> Sheets/storefront updated
   async function saveVehicleAndUpload(){
     const payload = buildPayload();
     if(!payload.make || !payload.model){
       setMStatus("Make + Model are required.", true);
       return;
     }
-    if(!CLOUD.cloudName || !CLOUD.uploadPreset){
-      setMStatus("Cloudinary config missing (check Cloud Run env vars).", true);
+    if(!CLOUD.cloudName){
+      setMStatus("Cloudinary config missing (CLOUDINARY_CLOUD_NAME).", true);
+      return;
+    }
+    if(!state.demo && !state.token){
+      setMStatus("Not logged in.", true);
       return;
     }
 
@@ -828,7 +853,7 @@
     setMStatus("Saving…", false);
 
     try{
-      // Ensure we have a vehicleId first (your server will auto-generate if blank)
+      // (1) Save first (vehicleId generated server-side if blank)
       const savedBase = await saveVehicle({
         vehicleId: payload.vehicleId || "",
         title: payload.title,
@@ -847,20 +872,27 @@
 
       if(files.length && !state.demo){
         ui.uploadLine.textContent = `Uploading ${files.length} photo(s)…`;
-        uploadedUrls = await uploadFilesToCloudinary(savedBase.vehicleId, files);
+
+        // (2) Ask server for signed upload params (recommended)
+        // If endpoint not available, fallback to unsigned preset upload (needs CLOUDINARY_UPLOAD_PRESET)
+        const signer = await getCloudinarySigner(savedBase.vehicleId);
+
+        // (3) Upload
+        uploadedUrls = await uploadFilesToCloudinary(savedBase.vehicleId, files, signer);
       }
 
       const existingImages = Array.isArray(payload.images) ? payload.images : [];
-      const mergedImages = [...existingImages, ...uploadedUrls];
+      const mergedImages = [...existingImages, ...uploadedUrls].filter(Boolean);
 
+      // (4) Hero selection + auto
       const heroImage = pickHero({
         heroPick: ui.heroPick.value,
         existingImages,
         newUploaded: uploadedUrls
-      });
+      }) || (mergedImages[0] || "");
 
-      // Final save with image URLs so Sheets/storefront has them
-      const finalSaved = await saveVehicle({
+      // Save final URLs to Sheets
+      await saveVehicle({
         vehicleId: savedBase.vehicleId,
         title: payload.title,
         make: payload.make,
@@ -870,13 +902,12 @@
         status: payload.status,
         notes: payload.notes,
         images: mergedImages,
-        heroImage: heroImage || ""
+        heroImage: heroImage
       });
 
       toast(files.length ? "Vehicle saved + photos uploaded." : "Vehicle saved.", "success");
       closeModal();
       await loadVehicles();
-      return finalSaved;
     }catch(e){
       setMStatus(String(e?.message || "Save failed."), true);
       toast("Save failed.", "error");
@@ -930,35 +961,121 @@
     return normalize([data.vehicle])[0];
   }
 
-  async function uploadOneToCloudinary(vehicleId, file){
+  // -----------------------------
+  // SIGNED UPLOAD SUPPORT
+  // -----------------------------
+
+  // Returns a "signer" object used by upload calls.
+  // signer.mode: "signed" | "unsigned"
+  // signed => { apiKey, timestamp, signature, folder }
+  // unsigned => { uploadPreset, folder }
+  async function getCloudinarySigner(vehicleId){
+    // If we've already decided signed endpoint isn't there, skip trying again.
+    if(state.unsignedFallback){
+      if(!CLOUD.uploadPreset) throw new Error("Unsigned upload preset missing (CLOUDINARY_UPLOAD_PRESET).");
+      return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder: makeFolder(vehicleId) };
+    }
+
+    try{
+      const folder = makeFolder(vehicleId);
+
+      const res = await fetch(API.cloudinarySign(), {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Accept":"application/json",
+          "Authorization":"Bearer " + state.token
+        },
+        body: JSON.stringify({
+          folder,
+          // you can also send other upload params that the server should sign:
+          // eager, tags, context, etc
+        })
+      });
+
+      // If endpoint isn't there yet, Cloud Run will typically return 404
+      if(res.status === 404){
+        state.unsignedFallback = true;
+        if(!CLOUD.uploadPreset) {
+          throw new Error("Signed upload endpoint not found, and CLOUDINARY_UPLOAD_PRESET is missing for fallback.");
+        }
+        ui.uploadLine.textContent = "Signed endpoint not found — falling back to unsigned preset upload.";
+        return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder };
+      }
+
+      const data = await res.json().catch(()=>null);
+      if(!res.ok || !data || data.ok !== true) throw new Error(data?.error || "Could not get signed upload params");
+
+      // Expected fields
+      const apiKey = data.apiKey || data.cloudinaryApiKey || "";
+      const timestamp = data.timestamp;
+      const signature = data.signature || "";
+      const signedFolder = data.folder || folder;
+
+      if(!apiKey || !timestamp || !signature) throw new Error("Signed upload params incomplete (apiKey/timestamp/signature).");
+
+      return {
+        mode: "signed",
+        apiKey,
+        timestamp,
+        signature,
+        folder: signedFolder,
+      };
+    }catch(err){
+      // Fallback to unsigned preset if possible
+      if(CLOUD.uploadPreset){
+        state.unsignedFallback = true;
+        ui.uploadLine.textContent = "Signed upload failed — using unsigned preset fallback.";
+        return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder: makeFolder(vehicleId) };
+      }
+      // If no fallback, bubble error
+      throw err;
+    }
+  }
+
+  function makeFolder(vehicleId){
+    // Folder strategy: baseFolder/dealers/<dealerId>/vehicles/<vehicleId>
+    return `${CLOUD.baseFolder}/dealers/${state.dealerId}/vehicles/${vehicleId}`;
+  }
+
+  async function uploadOneToCloudinary(file, signer){
     const url = `https://api.cloudinary.com/v1_1/${encodeURIComponent(CLOUD.cloudName)}/image/upload`;
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("upload_preset", CLOUD.uploadPreset);
 
-    // Folder strategy: baseFolder/dealers/<dealerId>/vehicles/<vehicleId>
-    const folder = `${CLOUD.baseFolder}/dealers/${state.dealerId}/vehicles/${vehicleId}`;
-    fd.append("folder", folder);
+    // Always set folder (either signed or unsigned)
+    fd.append("folder", signer.folder);
 
-    // Optional: keep original filename vibe
-    // fd.append("use_filename", "true");
-    // fd.append("unique_filename", "true");
+    if(signer.mode === "signed"){
+      fd.append("api_key", signer.apiKey);
+      fd.append("timestamp", String(signer.timestamp));
+      fd.append("signature", signer.signature);
+      // (Optional) keep filename behavior consistent
+      // fd.append("use_filename", "true");
+      // fd.append("unique_filename", "true");
+    } else {
+      // unsigned
+      fd.append("upload_preset", signer.uploadPreset);
+    }
 
     const res = await fetch(url, { method:"POST", body: fd });
     const json = await res.json().catch(()=>null);
+
     if(!res.ok){
       const msg = json?.error?.message || `Cloudinary upload failed (${res.status})`;
       throw new Error(msg);
     }
+
+    // ✅ secure_url is what we store into Sheets
     return json.secure_url || json.url;
   }
 
-  async function uploadFilesToCloudinary(vehicleId, files){
+  async function uploadFilesToCloudinary(vehicleId, files, signer){
     const out = [];
     for(let i=0;i<files.length;i++){
       const f = files[i];
       ui.uploadLine.textContent = `Uploading ${i+1}/${files.length}: ${f.name}`;
-      const secureUrl = await uploadOneToCloudinary(vehicleId, f);
+      const secureUrl = await uploadOneToCloudinary(f, signer);
       out.push(secureUrl);
     }
     ui.uploadLine.textContent = `Uploaded ${out.length}/${files.length}.`;
@@ -1025,8 +1142,8 @@
 
   function demoVehicles(){
     return normalize([
-      { vehicleId:"VEH-10021", make:"Toyota", model:"Vitz", year:2018, price:1250000, status:"available", notes:"Clean unit.", images:["x","y"] },
-      { vehicleId:"VEH-10022", make:"Honda", model:"Civic", year:2017, price:2200000, status:"pending", notes:"Pending deposit.", images:["x"] },
+      { vehicleId:"VEH-10021", make:"Toyota", model:"Vitz", year:2018, price:1250000, status:"available", notes:"Clean unit.", images:["https://example.com/a.jpg","https://example.com/b.jpg"], heroImage:"https://example.com/a.jpg" },
+      { vehicleId:"VEH-10022", make:"Honda", model:"Civic", year:2017, price:2200000, status:"pending", notes:"Pending deposit.", images:["https://example.com/c.jpg"] },
     ]);
   }
 
@@ -1053,8 +1170,9 @@
     return Number.isFinite(n) ? n : 0;
   }
   function numOrNull(v){
+    if(v === "" || v == null) return null;
     const n = Number(v);
-    return Number.isFinite(n) && v!=="" ? n : null;
+    return Number.isFinite(n) ? n : null;
   }
   function genVehicleId(){
     return "VEH-" + Math.random().toString(16).slice(2,8).toUpperCase();
