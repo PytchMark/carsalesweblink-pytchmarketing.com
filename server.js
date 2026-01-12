@@ -209,9 +209,6 @@ function digitsOnly(s) {
 function isValidDealerId(dealerId) {
   return /^[A-Za-z]{2}\d{3}$/.test(String(dealerId || "").trim());
 }
-function normalizeDealerId(dealerId) {
-  return String(dealerId || "").trim().toUpperCase();
-}
 function makeVehicleId() {
   return "VEH-" + crypto.randomBytes(3).toString("hex").toUpperCase();
 }
@@ -843,10 +840,9 @@ app.get("/api/admin/dealers", requireAuth, requireAdmin, async (_req, res) => {
 
 app.post("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { dealerId, name, status, whatsapp, logoUrl, passcode } = req.body || {};
-    const normalizedDealerId = normalizeDealerId(dealerId);
-    if (!normalizedDealerId || !name) return res.status(400).json({ ok: false, error: "dealerId and name required" });
-    if (!isValidDealerId(normalizedDealerId)) {
+    const { dealerId, name, status, whatsapp, logoUrl } = req.body || {};
+    if (!dealerId || !name) return res.status(400).json({ ok: false, error: "dealerId and name required" });
+    if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
     }
 
@@ -891,8 +887,7 @@ app.post("/api/admin/reset-passcode", requireAuth, requireAdmin, async (req, res
   try {
     const { dealerId } = req.body || {};
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
-    const normalizedDealerId = normalizeDealerId(dealerId);
-    if (!isValidDealerId(normalizedDealerId)) {
+    if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
     }
 
@@ -955,7 +950,7 @@ app.get("/api/admin/requests", requireAuth, requireAdmin, async (_req, res) => {
 
 app.get("/api/admin/dealer/:dealerId/vehicles", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const dealerId = normalizeDealerId(req.params.dealerId);
+    const dealerId = String(req.params.dealerId || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
@@ -970,7 +965,7 @@ app.get("/api/admin/dealer/:dealerId/vehicles", requireAuth, requireAdmin, async
 
 app.get("/api/admin/dealer/:dealerId/leads", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const dealerId = normalizeDealerId(req.params.dealerId);
+    const dealerId = String(req.params.dealerId || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
@@ -985,7 +980,7 @@ app.get("/api/admin/dealer/:dealerId/leads", requireAuth, requireAdmin, async (r
 
 app.post("/api/admin/dealer/:dealerId/leads/status", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const dealerId = normalizeDealerId(req.params.dealerId);
+    const dealerId = String(req.params.dealerId || "").trim();
     const { leadId, status } = req.body || {};
     if (!dealerId || !leadId || !status) {
       return res.status(400).json({ ok: false, error: "dealerId, leadId, status required" });
@@ -1007,8 +1002,7 @@ app.post("/api/dealer/login", async (req, res) => {
   try {
     const { dealerId, passcode } = req.body || {};
     if (!dealerId || !passcode) return res.status(400).json({ ok: false, error: "dealerId and passcode required" });
-    const normalizedDealerId = normalizeDealerId(dealerId);
-    if (!isValidDealerId(normalizedDealerId)) {
+    if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });
     }
 
@@ -1150,14 +1144,14 @@ app.get("/api/public/vehicles", async (req, res) => {
     const normalizedDealerId = normalizeDealerId(dealerId);
     const sheets = await getSheetsClient();
 
-    if (!normalizedDealerId) {
+    if (!dealerId) {
       return res.status(400).json({ error: "dealerId required" });
     }
-    if (!isValidDealerId(normalizedDealerId)) {
+    if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ error: "dealerId must be two letters followed by three numbers" });
     }
 
-    const vehicles = await dealerListVehicles(sheets, normalizedDealerId);
+    const vehicles = await dealerListVehicles(sheets, dealerId);
     return res.json({ vehicles: filterPublicVehicles(vehicles) });
   } catch (e) {
     res.status(500).json({ error: e?.message || "Failed to load public vehicles" });
@@ -1166,7 +1160,7 @@ app.get("/api/public/vehicles", async (req, res) => {
 
 app.get("/api/public/dealer", async (req, res) => {
   try {
-    const dealerId = normalizeDealerId(req.query.dealerId);
+    const dealerId = String(req.query.dealerId || "").trim();
     if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
     if (!isValidDealerId(dealerId)) {
       return res.status(400).json({ ok: false, error: "dealerId must be two letters followed by three numbers" });

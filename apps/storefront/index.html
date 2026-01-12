@@ -700,7 +700,7 @@
       const digits = digitsOnly(dealerProfile?.whatsapp || "");
       if (!digits) return "#";
       const dealerName = dealerProfile?.name || "Dealer";
-      const link = `${location.origin}/storefront/${encodeURIComponent(currentDealerId || "")}`;
+      const link = `${location.origin}/d/${encodeURIComponent(currentDealerId || "")}`;
       const messageParts = [
         `${dealerName} — WhatsApp request`,
         title ? `Vehicle: ${title}` : "",
