@@ -98,6 +98,7 @@ function serveAppIndex(appName) {
 }
 app.get("/", serveAppIndex("storefront"));
 app.get(["/storefront", "/storefront/"], serveAppIndex("storefront"));
+app.get("/d/:dealerId", serveAppIndex("storefront"));
 app.get(["/dealer", "/dealer/"], serveAppIndex("dealer"));
 app.get(["/admin", "/admin/"], serveAppIndex("admin"));
 app.get("/health", (_req, res) => res.json({ ok: true }));
@@ -334,11 +335,12 @@ async function ensureDealerTabLayout(sheets, dealerId) {
     "status",
     "notes",
     "heroImage",
+    "heroVideo",
     "imagesJson",
     "updatedAt",
   ];
 
-  const vehRange = `${title}!A1:K1`;
+  const vehRange = `${title}!A1:L1`;
   const existingVeh = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: vehRange });
   const rowVeh = (existingVeh.data.values && existingVeh.data.values[0]) || [];
   if (rowVeh.join("|") !== vehHeaders.join("|")) {
@@ -438,23 +440,41 @@ async function dealerListVehicles(sheets, dealerId) {
   const tab = safeDealerTabName(dealerId);
   await ensureDealerTabLayout(sheets, dealerId);
 
-  const range = `${tab}!A2:K`;
+  const range = `${tab}!A2:L`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
   const rows = res.data.values || [];
   return rows
     .filter((r) => (r[0] || "").trim())
     .map((r) => ({
-      vehicleId: r[0] || "",
-      title: r[1] || "",
-      make: r[2] || "",
-      model: r[3] || "",
-      year: r[4] ? Number(r[4]) : null,
-      price: r[5] ? Number(r[5]) : 0,
-      status: r[6] || "",
-      notes: r[7] || "",
-      heroImage: r[8] || "",
-      images: safeParseJsonArray(r[9]),
-      updatedAt: r[10] || "",
+      ...(r.length >= 12
+        ? {
+            vehicleId: r[0] || "",
+            title: r[1] || "",
+            make: r[2] || "",
+            model: r[3] || "",
+            year: r[4] ? Number(r[4]) : null,
+            price: r[5] ? Number(r[5]) : 0,
+            status: r[6] || "",
+            notes: r[7] || "",
+            heroImage: r[8] || "",
+            heroVideo: r[9] || "",
+            images: safeParseJsonArray(r[10]),
+            updatedAt: r[11] || "",
+          }
+        : {
+            vehicleId: r[0] || "",
+            title: r[1] || "",
+            make: r[2] || "",
+            model: r[3] || "",
+            year: r[4] ? Number(r[4]) : null,
+            price: r[5] ? Number(r[5]) : 0,
+            status: r[6] || "",
+            notes: r[7] || "",
+            heroImage: r[8] || "",
+            heroVideo: "",
+            images: safeParseJsonArray(r[9]),
+            updatedAt: r[10] || "",
+          }),
       dealerId,
     }));
 }
@@ -462,7 +482,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   const tab = safeDealerTabName(dealerId);
   await ensureDealerTabLayout(sheets, dealerId);
 
-  const range = `${tab}!A2:K`;
+  const range = `${tab}!A2:L`;
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
   const rows = res.data.values || [];
 
@@ -485,6 +505,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
     vehicle.status || "available",
     vehicle.notes || "",
     vehicle.heroImage || "",
+    vehicle.heroVideo || "",
     JSON.stringify(vehicle.images || []),
     updatedAt,
   ];
@@ -492,7 +513,7 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   if (foundRowNum === -1) {
     await sheets.spreadsheets.values.append({
       spreadsheetId: GOOGLE_SHEET_ID,
-      range: `${tab}!A:K`,
+      range: `${tab}!A:L`,
       valueInputOption: "RAW",
       insertDataOption: "INSERT_ROWS",
       requestBody: { values: [rowValues] },
@@ -500,13 +521,57 @@ async function dealerUpsertVehicle(sheets, dealerId, vehicle) {
   } else {
     await sheets.spreadsheets.values.update({
       spreadsheetId: GOOGLE_SHEET_ID,
-      range: `${tab}!A${foundRowNum}:K${foundRowNum}`,
+      range: `${tab}!A${foundRowNum}:L${foundRowNum}`,
       valueInputOption: "RAW",
       requestBody: { values: [rowValues] },
     });
   }
 
   return { ...vehicle, updatedAt, dealerId };
+}
+async function dealerListLeads(sheets, dealerId) {
+  const tab = safeDealerTabName(dealerId);
+  await ensureDealerTabLayout(sheets, dealerId);
+
+  const start = DEALER_LEADS_START_ROW + 1;
+  const range = `${tab}!A${start}:L`;
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range });
+  const rows = res.data.values || [];
+
+  return rows
+    .map((r, idx) => ({
+      createdAt: r[0] || "",
+      leadId: r[1] || "",
+      vehicleId: r[2] || "",
+      type: r[3] || "",
+      name: r[4] || "",
+      phone: r[5] || "",
+      email: r[6] || "",
+      preferredDate: r[7] || "",
+      preferredTime: r[8] || "",
+      notes: r[9] || "",
+      source: r[10] || "",
+      status: r[11] || "new",
+      dealerId,
+      rowNum: start + idx,
+    }))
+    .filter((l) => (l.leadId || "").trim());
+}
+async function dealerUpdateLeadStatus(sheets, dealerId, leadId, status) {
+  const leads = await dealerListLeads(sheets, dealerId);
+  const lead = leads.find((l) => l.leadId === leadId);
+  if (!lead) return null;
+
+  const tab = safeDealerTabName(dealerId);
+  const range = `${tab}!L${lead.rowNum}`;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    range,
+    valueInputOption: "RAW",
+    requestBody: { values: [[status]] },
+  });
+
+  return { ...lead, status };
 }
 async function dealerAppendLead(sheets, dealerId, lead) {
   const tab = safeDealerTabName(dealerId);
@@ -847,7 +912,62 @@ app.get("/api/admin/inventory", requireAuth, requireAdmin, async (_req, res) => 
 });
 
 app.get("/api/admin/requests", requireAuth, requireAdmin, async (_req, res) => {
-  res.json({ ok: true, requests: [] });
+  try {
+    const sheets = await getSheetsClient();
+    const dealers = await adminListDealers(sheets);
+
+    const all = [];
+    for (const d of dealers) {
+      try {
+        const leads = await dealerListLeads(sheets, d.dealerId);
+        all.push(...leads);
+      } catch {}
+    }
+
+    res.json({ ok: true, requests: all });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to load requests" });
+  }
+});
+
+app.get("/api/admin/dealer/:dealerId/vehicles", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const dealerId = String(req.params.dealerId || "").trim();
+    if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
+    const sheets = await getSheetsClient();
+    const vehicles = await dealerListVehicles(sheets, dealerId);
+    res.json({ ok: true, vehicles });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to load dealer inventory" });
+  }
+});
+
+app.get("/api/admin/dealer/:dealerId/leads", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const dealerId = String(req.params.dealerId || "").trim();
+    if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
+    const sheets = await getSheetsClient();
+    const leads = await dealerListLeads(sheets, dealerId);
+    res.json({ ok: true, leads });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to load dealer leads" });
+  }
+});
+
+app.post("/api/admin/dealer/:dealerId/leads/status", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const dealerId = String(req.params.dealerId || "").trim();
+    const { leadId, status } = req.body || {};
+    if (!dealerId || !leadId || !status) {
+      return res.status(400).json({ ok: false, error: "dealerId, leadId, status required" });
+    }
+    const sheets = await getSheetsClient();
+    const updated = await dealerUpdateLeadStatus(sheets, dealerId, String(leadId), String(status));
+    if (!updated) return res.status(404).json({ ok: false, error: "Lead not found" });
+    res.json({ ok: true, lead: updated });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to update lead status" });
+  }
 });
 
 // ----- DEALER -----
@@ -899,6 +1019,7 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
       status: String(body.status || "available").trim(),
       notes: String(body.notes || "").trim(),
       heroImage: String(body.heroImage || "").trim(),
+      heroVideo: String(body.heroVideo || "").trim(),
       images: Array.isArray(body.images) ? body.images : [],
     };
 
@@ -908,7 +1029,9 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
 
     // Keep only URL-like strings
     if (vehicle.heroImage && !isHttpUrl(vehicle.heroImage)) vehicle.heroImage = "";
+    if (vehicle.heroVideo && !isHttpUrl(vehicle.heroVideo)) vehicle.heroVideo = "";
     vehicle.images = (vehicle.images || []).filter(isHttpUrl);
+    vehicle.images = vehicle.images.slice(0, 7);
 
     // Auto-hero: if hero missing but images exist
     if (!vehicle.heroImage && vehicle.images.length) vehicle.heroImage = vehicle.images[0];
@@ -917,6 +1040,29 @@ app.post("/api/dealer/vehicles", requireAuth, requireDealer, async (req, res) =>
     res.json({ ok: true, vehicle: saved });
   } catch (e) {
     res.status(500).json({ ok: false, error: e?.message || "Failed to save vehicle" });
+  }
+});
+
+app.get("/api/dealer/leads", requireAuth, requireDealer, async (req, res) => {
+  try {
+    const sheets = await getSheetsClient();
+    const leads = await dealerListLeads(sheets, req.user.dealerId);
+    res.json({ ok: true, leads });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to load leads" });
+  }
+});
+
+app.post("/api/dealer/leads/status", requireAuth, requireDealer, async (req, res) => {
+  try {
+    const { leadId, status } = req.body || {};
+    if (!leadId || !status) return res.status(400).json({ ok: false, error: "leadId and status required" });
+    const sheets = await getSheetsClient();
+    const updated = await dealerUpdateLeadStatus(sheets, req.user.dealerId, String(leadId), String(status));
+    if (!updated) return res.status(404).json({ ok: false, error: "Lead not found" });
+    res.json({ ok: true, lead: updated });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to update lead status" });
   }
 });
 
@@ -967,22 +1113,35 @@ app.get("/api/public/vehicles", async (req, res) => {
     const { dealerId } = req.query || {};
     const sheets = await getSheetsClient();
 
-    if (dealerId) {
-      const vehicles = await dealerListVehicles(sheets, dealerId);
-      return res.json({ vehicles: filterPublicVehicles(vehicles) });
+    if (!dealerId) {
+      return res.status(400).json({ error: "dealerId required" });
     }
 
-    const dealers = await adminListDealers(sheets);
-    const all = [];
-    for (const d of dealers) {
-      try {
-        const vehicles = await dealerListVehicles(sheets, d.dealerId);
-        all.push(...vehicles);
-      } catch {}
-    }
-    res.json({ vehicles: filterPublicVehicles(all) });
+    const vehicles = await dealerListVehicles(sheets, dealerId);
+    return res.json({ vehicles: filterPublicVehicles(vehicles) });
   } catch (e) {
     res.status(500).json({ error: e?.message || "Failed to load public vehicles" });
+  }
+});
+
+app.get("/api/public/dealer", async (req, res) => {
+  try {
+    const dealerId = String(req.query.dealerId || "").trim();
+    if (!dealerId) return res.status(400).json({ ok: false, error: "dealerId required" });
+    const sheets = await getSheetsClient();
+    const dealer = await adminGetDealer(sheets, dealerId);
+    if (!dealer) return res.status(404).json({ ok: false, error: "Dealer not found" });
+    res.json({
+      ok: true,
+      dealer: {
+        dealerId: dealer.dealerId,
+        name: dealer.name,
+        logoUrl: dealer.logoUrl,
+        whatsapp: dealer.whatsapp,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || "Failed to load dealer" });
   }
 });
 
