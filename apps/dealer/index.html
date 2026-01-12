@@ -6,19 +6,20 @@
   <title>Carsales – Dealer</title>
   <style>
     :root{
-      --bg:#0b1020;
-      --card:#0f1630;
-      --card2:#121b3a;
-      --ink:#eef2ff;
-      --muted:#aab3d6;
-      --muted2:#7f88ad;
-      --border:rgba(255,255,255,.10);
-      --shadow:0 18px 50px rgba(0,0,0,.45);
-      --brand:#ff3b3b;
-      --brand2:#ff6b6b;
-      --good:#22c55e;
-      --warn:#fbbf24;
-      --bad:#fb7185;
+      --bg:#f6f7fb;
+      --surface:#ffffff;
+      --surface2:#fbfbfd;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --muted2:#94a3b8;
+      --line:#e5e7eb;
+      --shadow:0 18px 40px rgba(15, 23, 42, 0.12);
+      --shadow2:0 10px 24px rgba(15, 23, 42, 0.08);
+      --brand:#dc2626;
+      --brand2:#ef4444;
+      --good:#16a34a;
+      --warn:#f59e0b;
+      --bad:#ef4444;
       --radius:18px;
       --sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -29,9 +30,9 @@
       font-family:var(--sans);
       color:var(--ink);
       background:
-        radial-gradient(1200px 800px at 15% 0%, rgba(255,59,59,.22), transparent 55%),
-        radial-gradient(900px 650px at 85% 20%, rgba(80,120,255,.18), transparent 50%),
-        linear-gradient(180deg, #060914, #070a18 30%, #050615);
+        radial-gradient(circle at top left, rgba(220,38,38,.08), transparent 45%),
+        radial-gradient(circle at bottom right, rgba(239,68,68,.06), transparent 55%),
+        var(--bg);
       -webkit-font-smoothing:antialiased;
     }
     a{color:inherit;text-decoration:none}
@@ -41,26 +42,26 @@
     .shell{
       width:100%;
       max-width:1180px;
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.92);
+      border:1px solid var(--line);
       border-radius:28px;
       box-shadow: var(--shadow);
       overflow:hidden;
-      backdrop-filter: blur(14px);
+      backdrop-filter: blur(10px);
     }
 
     .top{
       display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
       padding:16px 18px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(90deg, rgba(255,255,255,.96), rgba(255,255,255,.92));
     }
     .brand{display:flex;align-items:center;gap:10px}
     .logo{
       width:44px;height:44px;border-radius:14px;
       display:grid;place-items:center;
-      background: radial-gradient(circle at 30% 20%, #ffd6d6, var(--brand) 45%, #7f1d1d 100%);
-      box-shadow:0 18px 30px rgba(255,59,59,.25);
+      background: radial-gradient(circle at 20% 20%, #fff, #fee2e2 55%, rgba(220,38,38,.25));
+      box-shadow:0 14px 30px rgba(220,38,38,.18);
       font-weight:900;
     }
     .title{font-weight:850;letter-spacing:.02em}
@@ -70,18 +71,19 @@
     .pill{
       display:inline-flex;align-items:center;gap:8px;
       padding:7px 10px;border-radius:999px;
-      background: rgba(0,0,0,.25);
-      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.90);
+      border:1px solid var(--line);
       color:var(--muted);
       font-size:12px;
+      box-shadow: var(--shadow2);
     }
     .dot{width:9px;height:9px;border-radius:99px;background:var(--warn);box-shadow:0 0 0 4px rgba(251,191,36,.20)}
     .dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(34,197,94,.22)}
     .dot.err{background:var(--bad);box-shadow:0 0 0 4px rgba(251,113,133,.20)}
 
     .btn{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.90);
       color:var(--ink);
       border-radius:999px;
       padding:10px 14px;
@@ -89,15 +91,16 @@
       font-size:12px;
       cursor:pointer;
       display:inline-flex;align-items:center;gap:8px;
-      transition:transform .10s ease, background .12s ease, border-color .12s ease;
+      transition:transform .10s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
       user-select:none;
     }
-    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.18)}
+    .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow2)}
     .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
     .btn-primary{
-      border-color:rgba(0,0,0,.35);
-      background: radial-gradient(circle at 20% 0%, var(--brand2), var(--brand) 55%, #b91c1c 100%);
-      box-shadow:0 18px 36px rgba(255,59,59,.22);
+      border-color:rgba(220,38,38,.25);
+      background: linear-gradient(135deg, var(--brand2), var(--brand));
+      color:#fff;
+      box-shadow:0 16px 32px rgba(220,38,38,.24);
     }
 
     .content{padding:18px}
@@ -111,22 +114,22 @@
       margin-bottom:14px;
     }
     .kpi{
-      background: rgba(0,0,0,.25);
-      border:1px solid rgba(255,255,255,.10);
+      background: var(--surface2);
+      border:1px solid var(--line);
       border-radius:18px;
       padding:12px;
-      box-shadow: 0 12px 26px rgba(0,0,0,.25);
+      box-shadow: var(--shadow2);
     }
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{font-size:18px;font-weight:900}
     .kpi .s{font-size:11px;color:var(--muted2)}
 
     .card{
-      background: rgba(0,0,0,.22);
-      border:1px solid rgba(255,255,255,.10);
+      background: var(--surface);
+      border:1px solid var(--line);
       border-radius:22px;
       padding:14px;
-      box-shadow: 0 14px 28px rgba(0,0,0,.25);
+      box-shadow: var(--shadow2);
     }
     .card h3{margin:0 0 6px;font-size:13px;font-weight:900;letter-spacing:.03em}
     .hint{color:var(--muted);font-size:12px;line-height:1.35}
@@ -138,8 +141,8 @@
     .label{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px;margin-bottom:6px}
     .input,.select,.textarea{
       width:100%;
-      background: rgba(15,22,48,.62);
-      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.96);
+      border:1px solid var(--line);
       border-radius:16px;
       padding:11px 12px;
       color:var(--ink);
@@ -148,8 +151,8 @@
       transition:border-color .15s ease, transform .08s ease, background .15s ease;
     }
     .input:focus,.select:focus,.textarea:focus{
-      border-color: rgba(255,59,59,.55);
-      background: rgba(15,22,48,.85);
+      border-color: rgba(220,38,38,.45);
+      box-shadow: 0 0 0 4px rgba(220,38,38,.12);
       transform: translateY(-1px);
     }
     .textarea{min-height:96px;resize:vertical}
@@ -159,41 +162,41 @@
     @media(min-width:820px){.row.three{grid-template-columns:1fr 1fr 1fr}}
 
     .table{
-      overflow:hidden;border-radius:22px;border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.22);
+      overflow:hidden;border-radius:22px;border:1px solid var(--line);
+      background: var(--surface);
     }
     .thead{
       display:flex;justify-content:space-between;gap:10px;align-items:center;
       padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border-bottom:1px solid var(--line);
+      background: var(--surface2);
     }
     .thead .t{font-weight:900;font-size:13px}
     .thead .m{color:var(--muted);font-size:12px}
     .scroll{max-height:560px;overflow:auto}
     table{width:100%;border-collapse:collapse;font-size:12px}
-    th,td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
+    th,td{padding:10px 10px;border-bottom:1px solid var(--line);text-align:left}
     th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
     tbody tr{cursor:pointer}
-    tbody tr:hover{background:rgba(255,255,255,.04)}
+    tbody tr:hover{background:rgba(15,23,42,.04)}
     .tag{
       display:inline-flex;align-items:center;
       padding:4px 10px;border-radius:999px;
       font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.05);
+      border:1px solid rgba(15,23,42,.10);
+      background: rgba(15,23,42,.04);
       color: var(--muted);
     }
-    .tag.available{border-color:rgba(34,197,94,.45);color:#bbf7d0;background:rgba(34,197,94,.12)}
-    .tag.pending{border-color:rgba(251,191,36,.45);color:#fde68a;background:rgba(251,191,36,.12)}
-    .tag.sold{border-color:rgba(251,113,133,.45);color:#fecaca;background:rgba(251,113,133,.12)}
-    .tag.new{border-color:rgba(255,255,255,.18);color:var(--ink);background:rgba(255,255,255,.08)}
-    .tag.booked{border-color:rgba(34,197,94,.45);color:#bbf7d0;background:rgba(34,197,94,.12)}
-    .tag.closed{border-color:rgba(255,255,255,.20);color:var(--muted);background:rgba(255,255,255,.06)}
+    .tag.available{border-color:rgba(22,163,74,.30);color:#166534;background:rgba(22,163,74,.12)}
+    .tag.pending{border-color:rgba(245,158,11,.30);color:#92400e;background:rgba(245,158,11,.12)}
+    .tag.sold{border-color:rgba(239,68,68,.30);color:#991b1b;background:rgba(239,68,68,.10)}
+    .tag.new{border-color:rgba(15,23,42,.10);color:var(--ink);background:rgba(15,23,42,.05)}
+    .tag.booked{border-color:rgba(22,163,74,.30);color:#166534;background:rgba(22,163,74,.12)}
+    .tag.closed{border-color:rgba(15,23,42,.12);color:var(--muted);background:rgba(15,23,42,.04)}
 
     .thumb{
-      width:48px;height:36px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.08);
+      width:48px;height:36px;border-radius:10px;object-fit:cover;border:1px solid var(--line);
+      background: rgba(15,23,42,.04);
     }
 
     .galleryGrid{
@@ -204,8 +207,8 @@
     }
     .galleryItem{
       border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.20);
+      border:1px solid var(--line);
+      background: var(--surface2);
       padding:8px;
       display:flex;
       flex-direction:column;
@@ -216,7 +219,7 @@
       height:88px;
       border-radius:10px;
       object-fit:cover;
-      background: rgba(255,255,255,.06);
+      background: rgba(15,23,42,.04);
     }
     .galleryActions{display:flex;gap:6px;flex-wrap:wrap}
     .galleryActions .btn{padding:6px 10px;font-size:10px}
@@ -225,7 +228,7 @@
     /* Modal */
     .backdrop{
       position:fixed;inset:0;display:none;align-items:center;justify-content:center;
-      background: rgba(0,0,0,.62);
+      background: rgba(15,23,42,.35);
       backdrop-filter: blur(10px);
       padding:16px;
       z-index:60;
@@ -235,27 +238,27 @@
       width:100%;
       max-width:980px;
       border-radius:26px;
-      border:1px solid rgba(255,255,255,.12);
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.20));
-      box-shadow: 0 28px 80px rgba(0,0,0,.55);
+      border:1px solid var(--line);
+      background: var(--surface);
+      box-shadow: 0 28px 60px rgba(15,23,42,.24);
       overflow:hidden;
     }
     .mhead{
       padding:14px 16px;
       display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background: linear-gradient(90deg, rgba(255,59,59,.12), rgba(255,255,255,.02));
+      border-bottom:1px solid var(--line);
+      background: var(--surface2);
     }
     .mhead h3{margin:0;font-size:14px;font-weight:950}
     .xbtn{
       width:36px;height:36px;border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.90);
       color:var(--ink);
       cursor:pointer;
       font-size:18px;
     }
-    .xbtn:hover{background:rgba(255,255,255,.10)}
+    .xbtn:hover{background:rgba(15,23,42,.04)}
     .mbody{padding:16px}
     .footerBtns{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
 
@@ -264,15 +267,15 @@
       position:fixed;right:16px;bottom:16px;z-index:80;
       display:none;align-items:center;gap:10px;
       padding:10px 14px;border-radius:999px;
-      background: rgba(0,0,0,.55);
-      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.96);
+      border:1px solid var(--line);
       color:var(--muted);
-      box-shadow: 0 18px 40px rgba(0,0,0,.55);
+      box-shadow: var(--shadow2);
     }
     #toast.show{display:flex}
     #toastDot{width:10px;height:10px;border-radius:99px;background:var(--brand)}
-    #toast.success{border-color:rgba(34,197,94,.38);color:#bbf7d0}
-    #toast.error{border-color:rgba(251,113,133,.40);color:#fecaca}
+    #toast.success{border-color:rgba(22,163,74,.30);color:#166534}
+    #toast.error{border-color:rgba(239,68,68,.30);color:#991b1b}
   </style>
 </head>
 
@@ -285,7 +288,7 @@
         <div class="logo">D</div>
         <div>
           <div class="title" id="topTitle">Dealer Portal</div>
-          <div class="sub" id="topSub">Log in to manage inventory + photos.</div>
+          <div class="sub" id="topSub">Manage inventory, pricing, and media in one place.</div>
         </div>
       </div>
       <div class="actions">
@@ -308,7 +311,7 @@
           <div class="row two" style="margin-top:10px">
             <div class="field">
               <div class="label"><span>Dealer ID</span><span>Format: AA123</span></div>
-              <input class="input" id="dealerId" placeholder="AA123" maxlength="5" autocomplete="username">
+              <input class="input" id="dealerId" placeholder="AA123" maxlength="7" autocomplete="username">
             </div>
             <div class="field">
               <div class="label"><span>Passcode</span><span>Required</span></div>
@@ -327,9 +330,8 @@
         <div class="card">
           <h3>Photo storage</h3>
           <div class="hint">
-            Photos upload to <b>Cloudinary</b>. We first request a <span class="mono">signed upload</span> from your server
-            (recommended), upload files, then save each <span class="mono">secure_url</span> into Google Sheets for the storefront.<br>
-            <span style="opacity:.85">If the signed endpoint isn’t set up yet, this UI can automatically fall back to unsigned preset uploads.</span>
+            Photos are stored securely in the shared media library. Once saved, they appear on the storefront instantly.
+            If uploads pause, check your connection or contact support.
           </div>
           <div class="statusline" id="cfgLine"></div>
         </div>
@@ -508,7 +510,7 @@
     <div class="mhead">
       <div>
         <h3 id="mTitle">Add vehicle</h3>
-        <div class="sub" id="mSub">Save to Sheets + upload photos to Cloudinary.</div>
+        <div class="sub" id="mSub">Save vehicle details and upload photos.</div>
       </div>
       <button class="xbtn" id="mClose" type="button" aria-label="Close">×</button>
     </div>
@@ -560,9 +562,34 @@
         <textarea class="textarea" id="vNotes" placeholder="Financing, trade-ins, condition, etc."></textarea>
       </div>
 
-      <div class="field">
-        <div class="label"><span>Hero video URL</span><span>Optional</span></div>
-        <input class="input" id="vHeroVideo" placeholder="https://..." />
+      <div class="row three">
+        <div class="field">
+          <div class="label"><span>Mileage (km)</span><span>Optional</span></div>
+          <input class="input" id="vMileage" type="number" placeholder="45000">
+        </div>
+        <div class="field">
+          <div class="label"><span>Transmission</span><span>Optional</span></div>
+          <input class="input" id="vTransmission" placeholder="Automatic">
+        </div>
+        <div class="field">
+          <div class="label"><span>Fuel type</span><span>Optional</span></div>
+          <input class="input" id="vFuelType" placeholder="Gasoline">
+        </div>
+      </div>
+
+      <div class="row three">
+        <div class="field">
+          <div class="label"><span>Body type</span><span>Optional</span></div>
+          <input class="input" id="vBodyType" placeholder="Sedan">
+        </div>
+        <div class="field">
+          <div class="label"><span>Color</span><span>Optional</span></div>
+          <input class="input" id="vColor" placeholder="White">
+        </div>
+        <div class="field">
+          <div class="label"><span>VIN</span><span>Optional</span></div>
+          <input class="input" id="vVin" placeholder="JH4KA8260MC000000">
+        </div>
       </div>
 
       <div class="card" style="margin-top:12px">
@@ -670,7 +697,12 @@
     vPrice: el("vPrice"),
     vTitle: el("vTitle"),
     vNotes: el("vNotes"),
-    vHeroVideo: el("vHeroVideo"),
+    vMileage: el("vMileage"),
+    vTransmission: el("vTransmission"),
+    vFuelType: el("vFuelType"),
+    vBodyType: el("vBodyType"),
+    vColor: el("vColor"),
+    vVin: el("vVin"),
 
     files: el("files"),
     galleryGrid: el("galleryGrid"),
@@ -752,16 +784,16 @@
       CLOUD.baseFolder = data.cloudinary?.baseFolder || "mediaexclusive";
 
       if(!CLOUD.cloudName){
-        ui.cfgLine.textContent = "Cloudinary config missing. Set CLOUDINARY_CLOUD_NAME on Cloud Run.";
+        ui.cfgLine.textContent = "Media storage is not configured. Please contact support.";
         ui.cfgLine.classList.add("error");
       } else if(!CLOUD.uploadPreset){
         // Signed uploads don't require upload preset, but fallback unsigned does.
-        ui.cfgLine.textContent = `Cloudinary ready: ${CLOUD.cloudName} · folder: ${CLOUD.baseFolder} (upload preset missing — signed uploads required)`;
+        ui.cfgLine.textContent = `Media storage connected · folder: ${CLOUD.baseFolder}`;
       } else {
-        ui.cfgLine.textContent = `Cloudinary ready: ${CLOUD.cloudName} · folder: ${CLOUD.baseFolder}`;
+        ui.cfgLine.textContent = `Media storage connected · folder: ${CLOUD.baseFolder}`;
       }
     }catch{
-      ui.cfgLine.textContent = "Could not load Cloudinary config from server.";
+      ui.cfgLine.textContent = "Unable to verify media storage. Please refresh or contact support.";
       ui.cfgLine.classList.add("error");
     }
   }
@@ -784,14 +816,14 @@
   }
 
   async function doLogin(){
-    const dealerId = (ui.dealerId.value || "").trim();
+    const dealerId = (ui.dealerId.value || "").trim().toUpperCase();
     const passcode = (ui.passcode.value || "").trim();
     if(!dealerId || !passcode){
       setLoginStatus("Enter Dealer ID + passcode.", true);
       return;
     }
     if(!isValidDealerId(dealerId)){
-      setLoginStatus("Dealer ID must be two letters followed by three numbers.", true);
+      setLoginStatus("Dealer ID must be two letters followed by 3-5 numbers.", true);
       return;
     }
     setLoginStatus("Signing in…", false);
@@ -1159,7 +1191,12 @@
     ui.vPrice.value = v?.price || "";
     ui.vTitle.value = v?.title || "";
     ui.vNotes.value = v?.notes || "";
-    ui.vHeroVideo.value = v?.heroVideo || "";
+    ui.vMileage.value = v?.mileage ?? "";
+    ui.vTransmission.value = v?.transmission || "";
+    ui.vFuelType.value = v?.fuelType || "";
+    ui.vBodyType.value = v?.bodyType || "";
+    ui.vColor.value = v?.color || "";
+    ui.vVin.value = v?.vin || "";
     ui.files.value = "";
     ui.replaceFile.value = "";
     state.replacingIndex = null;
@@ -1167,8 +1204,7 @@
     if(!state.editing){
       state.editing = {
         images: [],
-        heroImage: "",
-        heroVideo: ""
+        heroImage: ""
       };
     }
     if(!Array.isArray(state.editing.images)) state.editing.images = [];
@@ -1307,16 +1343,16 @@
       setMStatus("Make + Model are required.", true);
       return;
     }
-    if(!CLOUD.cloudName){
-      setMStatus("Cloudinary config missing (CLOUDINARY_CLOUD_NAME).", true);
-      return;
-    }
     if(!state.demo && !state.token){
       setMStatus("Not logged in.", true);
       return;
     }
 
     const newFiles = ui.files.files ? Array.from(ui.files.files) : [];
+    if(newFiles.length && !CLOUD.cloudName){
+      setMStatus("Media storage is not configured. Contact support.", true);
+      return;
+    }
     const existingImages = Array.isArray(payload.images) ? payload.images : [];
     if(existingImages.length + newFiles.length > 7){
       setMStatus("Maximum 7 images allowed per vehicle.", true);
@@ -1338,9 +1374,14 @@
         price: payload.price,
         status: payload.status,
         notes: payload.notes,
+        mileage: payload.mileage,
+        transmission: payload.transmission,
+        fuelType: payload.fuelType,
+        bodyType: payload.bodyType,
+        color: payload.color,
+        vin: payload.vin,
         images: existingImages,
         heroImage: payload.heroImage || "",
-        heroVideo: payload.heroVideo || "",
       });
 
       let uploadedUrls = [];
@@ -1373,9 +1414,14 @@
         price: payload.price,
         status: payload.status,
         notes: payload.notes,
+        mileage: payload.mileage,
+        transmission: payload.transmission,
+        fuelType: payload.fuelType,
+        bodyType: payload.bodyType,
+        color: payload.color,
+        vin: payload.vin,
         images: mergedImages,
-        heroImage: heroImage,
-        heroVideo: payload.heroVideo || ""
+        heroImage: heroImage
       });
 
       state.editing.images = mergedImages;
@@ -1402,7 +1448,12 @@
       price: num(ui.vPrice.value),
       title: (ui.vTitle.value || "").trim(),
       notes: (ui.vNotes.value || "").trim(),
-      heroVideo: (ui.vHeroVideo.value || "").trim(),
+      mileage: numOrNull(ui.vMileage.value),
+      transmission: (ui.vTransmission.value || "").trim(),
+      fuelType: (ui.vFuelType.value || "").trim(),
+      bodyType: (ui.vBodyType.value || "").trim(),
+      color: (ui.vColor.value || "").trim(),
+      vin: (ui.vVin.value || "").trim(),
       images: Array.isArray(state.editing?.images) ? state.editing.images : [],
       heroImage: (state.editing?.heroImage || "")
     };
@@ -1448,7 +1499,7 @@
   async function getCloudinarySigner(vehicleId){
     // If we've already decided signed endpoint isn't there, skip trying again.
     if(state.unsignedFallback){
-      if(!CLOUD.uploadPreset) throw new Error("Unsigned upload preset missing (CLOUDINARY_UPLOAD_PRESET).");
+      if(!CLOUD.uploadPreset) throw new Error("Standard upload preset is missing. Contact support.");
       return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder: makeFolder(vehicleId) };
     }
 
@@ -1473,9 +1524,9 @@
       if(res.status === 404){
         state.unsignedFallback = true;
         if(!CLOUD.uploadPreset) {
-          throw new Error("Signed upload endpoint not found, and CLOUDINARY_UPLOAD_PRESET is missing for fallback.");
+          throw new Error("Secure upload is unavailable and standard upload is not configured.");
         }
-        ui.uploadLine.textContent = "Signed endpoint not found — falling back to unsigned preset upload.";
+        ui.uploadLine.textContent = "Secure upload unavailable — using standard upload.";
         return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder };
       }
 
@@ -1501,7 +1552,7 @@
       // Fallback to unsigned preset if possible
       if(CLOUD.uploadPreset){
         state.unsignedFallback = true;
-        ui.uploadLine.textContent = "Signed upload failed — using unsigned preset fallback.";
+        ui.uploadLine.textContent = "Secure upload failed — using standard upload.";
         return { mode:"unsigned", uploadPreset: CLOUD.uploadPreset, folder: makeFolder(vehicleId) };
       }
       // If no fallback, bubble error
@@ -1600,8 +1651,13 @@
       price: Number(v.price||0) || 0,
       status: (v.status || "available").toLowerCase(),
       notes: v.notes || "",
+      mileage: (v.mileage!=null && v.mileage!=="") ? Number(v.mileage) : null,
+      transmission: v.transmission || "",
+      fuelType: v.fuelType || "",
+      bodyType: v.bodyType || "",
+      color: v.color || "",
+      vin: v.vin || "",
       heroImage: v.heroImage || "",
-      heroVideo: v.heroVideo || "",
       images: Array.isArray(v.images) ? v.images : [],
       updatedAt: v.updatedAt || v.createdAt || new Date().toISOString(),
       createdAt: v.createdAt || v.updatedAt || new Date().toISOString()
@@ -1650,7 +1706,7 @@
     return Number.isFinite(n) ? n : null;
   }
   function isValidDealerId(v){
-    return /^[A-Za-z]{2}\d{3}$/.test(String(v || "").trim());
+    return /^[A-Za-z]{2}\d{3,5}$/.test(String(v || "").trim());
   }
   function genVehicleId(){
     return "VEH-" + Math.random().toString(16).slice(2,8).toUpperCase();
