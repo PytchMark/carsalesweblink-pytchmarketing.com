@@ -1,799 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Carsales — Admin Console</title>
-
-  <style>
-    :root{
-      --bg:#f6f7fb;
-      --surface:#ffffff;
-      --surface2:#fbfbfd;
-
-      --ink:#0f172a;
-      --muted:#64748b;
-      --muted2:#94a3b8;
-
-      --brand:#dc2626;
-      --brand2:#ef4444;
-      --brandSoft:#fee2e2;
-      --brandLine:rgba(220,38,38,.18);
-
-      --line:#e5e7eb;
-      --shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
-      --shadow2: 0 10px 24px rgba(15, 23, 42, 0.08);
-
-      --ok:#16a34a;
-      --warn:#f59e0b;
-      --bad:#ef4444;
-
-      --radius:18px;
-      --radius2:24px;
-
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      --sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-    }
-
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      color:var(--ink);
-      background:
-        radial-gradient(circle at top left, rgba(220,38,38,.08), transparent 45%),
-        radial-gradient(circle at bottom right, rgba(239,68,68,.06), transparent 55%),
-        var(--bg);
-      -webkit-font-smoothing:antialiased;
-    }
-    a{color:inherit;text-decoration:none}
-    .hidden{display:none!important}
-
-    .wrap{
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:18px;
-    }
-
-    .shell{
-      width:100%;
-      max-width:1260px;
-      background:rgba(255,255,255,.86);
-      border-radius:var(--radius2);
-      border:1px solid var(--line);
-      box-shadow:var(--shadow);
-      padding:18px;
-      backdrop-filter: blur(12px);
-    }
-
-    .top{
-      display:flex;
-      flex-wrap:wrap;
-      gap:14px;
-      justify-content:space-between;
-      align-items:flex-start;
-      margin-bottom:14px;
-    }
-
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
-    .badge{
-      width:44px;height:44px;border-radius:16px;
-      background: radial-gradient(circle at 20% 20%, #fff, var(--brandSoft) 55%, rgba(220,38,38,.25));
-      display:flex;align-items:center;justify-content:center;
-      font-weight:900;font-size:18px;color:var(--brand);
-      box-shadow: 0 12px 24px rgba(220,38,38,.14);
-    }
-    .title{font-size:18px;font-weight:900}
-    .sub{font-size:12px;color:var(--muted);margin-top:3px}
-
-    .actions{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:flex-end;
-    }
-
-    .btn{
-      border-radius:999px;
-      border:1px solid transparent;
-      padding:9px 14px;
-      font-size:12px;
-      font-weight:750;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      cursor:pointer;
-      background:transparent;
-      color:var(--ink);
-      transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-
-    .btn-ghost{
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.90);
-      box-shadow:var(--shadow2);
-    }
-    .btn-ghost:hover{transform:translateY(-1px)}
-
-    .btn-primary{
-      background:linear-gradient(135deg, var(--brand2), var(--brand));
-      color:#fff;
-      box-shadow:0 16px 32px rgba(220,38,38,.28);
-    }
-    .btn-primary:hover{transform:translateY(-1px)}
-
-    .btn-danger{
-      border:1px solid rgba(239,68,68,.30);
-      background:rgba(239,68,68,.08);
-      color:#991b1b;
-      box-shadow:var(--shadow2);
-    }
-    .btn-danger:hover{transform:translateY(-1px); background:rgba(239,68,68,.12)}
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.90);
-      border:1px solid var(--line);
-      font-size:12px;
-      color:var(--muted);
-      box-shadow:var(--shadow2);
-    }
-    .dot{
-      width:8px;height:8px;border-radius:999px;
-      background:var(--warn);
-      box-shadow:0 0 0 3px rgba(245,158,11,.18);
-    }
-    .dot.on{background:var(--ok); box-shadow:0 0 0 3px rgba(22,163,74,.18)}
-    .dot.err{background:var(--bad); box-shadow:0 0 0 3px rgba(239,68,68,.18)}
-
-    /* Layout */
-    .grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-    @media(min-width:1020px){
-      .grid{grid-template-columns:0.36fr 0.64fr}
-    }
-
-    .panel{
-      background:rgba(255,255,255,.92);
-      border:1px solid var(--line);
-      border-radius:20px;
-      padding:14px;
-      box-shadow:var(--shadow2);
-    }
-    .panel h3{
-      margin:0 0 6px;
-      font-size:13px;
-      font-weight:900;
-      letter-spacing:.02em;
-    }
-    .hint{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.35;
-    }
-
-    /* Inputs */
-    .field{margin-top:10px}
-    .label{
-      display:flex;
-      justify-content:space-between;
-      gap:8px;
-      font-size:11px;
-      color:var(--muted);
-      margin-bottom:5px;
-    }
-    .input,.select,.textarea{
-      width:100%;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.92);
-      padding:10px 12px;
-      font-size:13px;
-      color:var(--ink);
-      outline:none;
-      transition:box-shadow .12s ease, border-color .12s ease;
-    }
-    .input:focus,.select:focus,.textarea:focus{
-      border-color:rgba(220,38,38,.45);
-      box-shadow:0 0 0 4px rgba(220,38,38,.12);
-    }
-    .textarea{min-height:90px;resize:vertical}
-    .row{display:grid;grid-template-columns:1fr;gap:8px}
-    @media(min-width:560px){.row.two{grid-template-columns:1fr 1fr}}
-
-    .kpis{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:10px;
-      margin-bottom:10px;
-    }
-    .kpi{
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.96);
-      padding:12px;
-      box-shadow:var(--shadow2);
-    }
-    .kpi .t{font-size:11px;color:var(--muted)}
-    .kpi .v{font-size:18px;font-weight:900}
-    .kpi .s{font-size:11px;color:var(--muted2)}
-
-    /* Tabs */
-    .tabs{
-      display:flex;
-      gap:6px;
-      flex-wrap:wrap;
-      border-radius:999px;
-      padding:4px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.92);
-      box-shadow:var(--shadow2);
-    }
-    .tab{
-      border:none;
-      cursor:pointer;
-      padding:7px 12px;
-      border-radius:999px;
-      background:transparent;
-      color:var(--muted);
-      font-size:11px;
-      font-weight:900;
-      letter-spacing:.05em;
-      transition: background .12s ease, color .12s ease, transform .08s ease;
-    }
-    .tab.active{
-      background:rgba(220,38,38,.10);
-      color:var(--brand);
-      transform:translateY(-1px);
-    }
-
-    /* Table */
-    .table-shell{
-      overflow:hidden;
-      border-radius:20px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.96);
-      box-shadow:var(--shadow2);
-    }
-    .table-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      padding:12px 14px;
-      border-bottom:1px solid var(--line);
-      background:linear-gradient(to right, rgba(220,38,38,.05), rgba(255,255,255,.92));
-    }
-    .table-title{font-size:13px;font-weight:900}
-    .table-meta{font-size:11px;color:var(--muted)}
-    .scroll{max-height:610px;overflow:auto}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    thead{position:sticky;top:0;background:var(--surface2);z-index:1}
-    th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
-    th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-    tbody tr:hover{background:rgba(220,38,38,.04)}
-    .mono{font-family:var(--mono); font-size:11px}
-
-    .badgeMini{
-      display:inline-flex;
-      align-items:center;
-      padding:3px 8px;
-      border-radius:999px;
-      font-size:10px;
-      border:1px solid rgba(220,38,38,.22);
-      background:rgba(220,38,38,.06);
-      color:#991b1b;
-    }
-
-    .status{
-      display:inline-flex;
-      align-items:center;
-      padding:3px 9px;
-      border-radius:999px;
-      font-size:10px;
-      font-weight:900;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      border:1px solid transparent;
-    }
-    .available{background:rgba(22,163,74,.10);color:#166534;border-color:rgba(22,163,74,.30)}
-    .pending{background:rgba(245,158,11,.12);color:#92400e;border-color:rgba(245,158,11,.35)}
-    .sold{background:rgba(239,68,68,.12);color:#991b1b;border-color:rgba(239,68,68,.35)}
-
-    .active{background:rgba(22,163,74,.10);color:#166534;border-color:rgba(22,163,74,.30)}
-    .paused{background:rgba(245,158,11,.10);color:#92400e;border-color:rgba(245,158,11,.30)}
-
-    .reqNew{background:rgba(239,68,68,.10);color:#991b1b;border-color:rgba(239,68,68,.25)}
-    .reqBooked{background:rgba(22,163,74,.10);color:#166534;border-color:rgba(22,163,74,.25)}
-    .reqClosed{background:rgba(15,23,42,.06);color:#0f172a;border-color:rgba(15,23,42,.10)}
-
-    /* Modal */
-    .backdrop{
-      position:fixed;inset:0;z-index:50;
-      background:rgba(15,23,42,.55);
-      backdrop-filter:blur(10px);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:16px;
-    }
-    .backdrop.show{display:flex}
-    .modal{
-      width:100%;
-      max-width:820px;
-      background:rgba(255,255,255,.98);
-      border-radius:26px;
-      border:1px solid var(--line);
-      box-shadow:0 30px 70px rgba(15,23,42,.22);
-      overflow:hidden;
-    }
-    .mhead{
-      padding:14px 16px 10px;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:10px;
-      border-bottom:1px solid var(--line);
-      background:linear-gradient(to right, rgba(220,38,38,.06), rgba(255,255,255,.94));
-    }
-    .mhead h3{margin:0;font-size:14px;font-weight:900}
-    .xbtn{
-      border:none;
-      background:rgba(15,23,42,.04);
-      color:var(--ink);
-      font-size:20px;
-      cursor:pointer;
-      width:34px;height:34px;
-      border-radius:999px;
-    }
-    .xbtn:hover{background:rgba(220,38,38,.10);color:var(--brand)}
-    .mbody{padding:14px 16px}
-    .statusline{min-height:18px;font-size:12px;color:var(--muted);margin-top:8px}
-    .statusline.error{color:var(--bad)}
-
-    /* Toast */
-    #toast{
-      position:fixed;
-      bottom:16px;
-      right:16px;
-      z-index:60;
-      padding:10px 14px;
-      border-radius:999px;
-      font-size:12px;
-      display:none;
-      align-items:center;
-      gap:8px;
-      background:rgba(255,255,255,.92);
-      border:1px solid var(--line);
-      box-shadow:var(--shadow);
-    }
-    #toast.show{display:flex}
-    #toast.success{border-color:rgba(22,163,74,.35);color:#166534}
-    #toast.error{border-color:rgba(239,68,68,.35);color:#991b1b}
-    #toastDot{width:8px;height:8px;border-radius:999px;background:var(--brand)}
-
-    .splitBtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
-  </style>
-</head>
-
-<body>
-  <div class="wrap">
-
-    <!-- LOGIN -->
-    <div class="shell" id="loginView">
-      <div class="top">
-        <div class="brand">
-          <div class="badge">A</div>
-          <div>
-            <div class="title">Admin Console</div>
-            <div class="sub">Manage dealers, inventory, and viewing requests.</div>
-          </div>
-        </div>
-        <div class="actions">
-          <a class="btn btn-ghost" href="/">← Storefront</a>
-          <a class="btn btn-ghost" href="/dealer">Dealer ↗</a>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3>Sign in</h3>
-        <div class="hint">
-          Use your admin credentials to access dealer management, inventory oversight, and storefront controls.
-        </div>
-
-        <div class="row two" style="margin-top:10px">
-          <div class="field">
-            <div class="label"><span>Username</span><span>Required</span></div>
-            <input id="username" class="input" placeholder="adminpytch" autocomplete="username" />
-          </div>
-          <div class="field">
-            <div class="label"><span>Password</span><span>Required</span></div>
-            <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password" />
-          </div>
-        </div>
-
-        <div class="splitBtns">
-          <button class="btn btn-ghost" id="btnDemo" type="button">Demo mode</button>
-          <button class="btn btn-primary" id="btnLogin" type="button">Sign in</button>
-        </div>
-
-        <div class="statusline" id="loginStatus"></div>
-      </div>
-    </div>
-
-    <!-- DASH -->
-    <div class="shell hidden" id="dashView">
-      <div class="top">
-        <div class="brand">
-          <div class="badge">A</div>
-          <div>
-            <div class="title">Carsales Admin</div>
-            <div class="sub" id="whoami">Admin</div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <div class="pill" title="API health">
-            <span class="dot" id="apiDot"></span>
-            <span id="apiStatus">Connecting…</span>
-          </div>
-
-          <div class="tabs" role="tablist" aria-label="Admin tabs">
-            <button class="tab active" id="tabDealers" data-tab="dealers" type="button">Dealers</button>
-            <button class="tab" id="tabInventory" data-tab="inventory" type="button">Inventory</button>
-            <button class="tab" id="tabRequests" data-tab="requests" type="button">Requests</button>
-            <button class="tab" id="tabDealerView" data-tab="dealerView" type="button">Dealer View</button>
-            <button class="tab" id="tabSettings" data-tab="settings" type="button">Settings</button>
-          </div>
-
-          <button class="btn btn-ghost" id="btnRefresh" type="button">Refresh</button>
-          <button class="btn btn-ghost" id="btnLogout" type="button">Logout</button>
-        </div>
-      </div>
-
-      <div class="grid">
-        <!-- LEFT CONTROL PANEL -->
-        <div class="panel">
-          <h3>Controls</h3>
-          <div class="hint" id="hint">
-            Search + filter across the current tab.
-          </div>
-
-          <div class="field">
-            <div class="label"><span>Search</span><span>Dealer / Vehicle / Customer</span></div>
-            <input id="q" class="input" placeholder="Search…" />
-          </div>
-
-          <div class="field" id="statusFilterWrap">
-            <div class="label"><span>Status filter</span><span>Contextual</span></div>
-            <select id="statusFilter" class="select">
-              <option value="">All</option>
-            </select>
-          </div>
-
-          <div class="statusline" id="dashStatus"></div>
-
-          <!-- Contextual actions (Dealers tab) -->
-          <div class="panel" id="dealerActions" style="margin-top:10px">
-            <h3>Dealer actions</h3>
-            <div class="hint">Create a dealer profile and generate a passcode.</div>
-
-            <div class="field">
-              <div class="label"><span>Dealer name</span><span>Required</span></div>
-              <input id="newDealerName" class="input" placeholder="Pytch Motors" />
-            </div>
-
-            <div class="row two">
-              <div class="field">
-              <div class="label"><span>Dealer ID</span><span>Format: AA123</span></div>
-              <input id="newDealerId" class="input" placeholder="AA123" maxlength="7" />
-              </div>
-              <div class="field">
-                <div class="label"><span>Status</span><span>Default</span></div>
-                <select id="newDealerStatus" class="select">
-                  <option value="active">Active</option>
-                  <option value="paused">Paused</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="field">
-              <div class="label"><span>Passcode</span><span>Optional</span></div>
-              <input id="newDealerPasscode" class="input" placeholder="123456" />
-            </div>
-
-            <div class="row two">
-              <div class="field">
-                <div class="label"><span>WhatsApp</span><span>Optional</span></div>
-                <input id="newDealerWhatsApp" class="input" placeholder="8765550123" />
-              </div>
-              <div class="field">
-                <div class="label"><span>Logo URL</span><span>Optional</span></div>
-                <input id="newDealerLogo" class="input" placeholder="https://..." />
-              </div>
-            </div>
-
-            <div class="splitBtns">
-              <button class="btn btn-ghost" id="btnOpenDealerModal" type="button">Open dealer editor</button>
-              <button class="btn btn-primary" id="btnCreateDealer" type="button">Create dealer</button>
-            </div>
-
-            <div class="statusline" id="dealerActionStatus"></div>
-          </div>
-
-          <div class="panel hidden" id="dealerViewControls" style="margin-top:10px">
-            <h3>Dealer view</h3>
-            <div class="hint">Select a dealer to view inventory, leads, and KPIs.</div>
-
-            <div class="field">
-              <div class="label"><span>Dealer</span><span>Required</span></div>
-              <select id="dealerSelect" class="select"></select>
-            </div>
-
-            <div class="field">
-              <div class="label"><span>Date range</span><span>Filter KPIs</span></div>
-              <select id="dealerRange" class="select">
-                <option value="7">Last 7 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-
-            <div class="row two" id="dealerCustomRange" style="display:none">
-              <div class="field">
-                <div class="label"><span>Start</span></div>
-                <input id="dealerStart" class="input" type="date" />
-              </div>
-              <div class="field">
-                <div class="label"><span>End</span></div>
-                <input id="dealerEnd" class="input" type="date" />
-              </div>
-            </div>
-
-            <div class="splitBtns">
-              <button class="btn btn-ghost" id="btnDealerViewRefresh" type="button">Refresh dealer view</button>
-            </div>
-          </div>
-
-          <!-- System Info -->
-          <div class="panel" style="margin-top:10px">
-            <h3>Platform storage</h3>
-            <div class="hint">
-              Media cloud: <span class="mono" id="cloudName">(loading)</span><br/>
-              Base folder: <span class="mono" id="cloudFolder">(loading)</span><br/>
-              File structure: <span class="mono">dealers/{dealerId}/vehicles/{vehicleId}/</span><br/>
-              Leads are stored per dealer, keeping requests organized.
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT TABLE -->
-        <div class="table-shell" id="mainTable">
-          <div class="table-head">
-            <div>
-              <div class="table-title" id="tableTitle">Dealers</div>
-              <div class="table-meta">Showing <span id="count">0</span> rows</div>
-            </div>
-            <div class="table-meta" id="lastUpdated">—</div>
-          </div>
-
-          <div class="scroll">
-            <table>
-              <thead>
-                <tr id="theadRow"></tr>
-              </thead>
-              <tbody id="tbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="panel hidden" id="settingsPanel">
-          <h3>Storefront design</h3>
-          <div class="hint">Set the global brand assets shown across every dealer storefront.</div>
-
-          <div class="field">
-            <div class="label"><span>Main logo URL</span><span>Displayed in storefront header</span></div>
-            <input id="settingLogoUrl" class="input" placeholder="https://..." />
-          </div>
-
-          <div class="field">
-            <div class="label"><span>Hero video URL</span><span>Optional homepage highlight</span></div>
-            <input id="settingHeroVideoUrl" class="input" placeholder="https://..." />
-          </div>
-
-          <div class="splitBtns" style="justify-content:flex-start">
-            <button class="btn btn-primary" id="btnSaveSettings" type="button">Save storefront settings</button>
-          </div>
-
-          <div class="statusline" id="settingsStatus"></div>
-        </div>
-
-        <div class="panel hidden" id="dealerViewPanel">
-          <h3>Dealer dashboard</h3>
-          <div class="hint" id="dealerViewHint">Select a dealer to view KPIs, inventory, and requests.</div>
-
-          <div class="kpis" id="dealerKpis">
-            <div class="kpi">
-              <div class="t">Total inventory</div>
-              <div class="v" id="dkInventory">0</div>
-              <div class="s">Vehicles listed</div>
-            </div>
-            <div class="kpi">
-              <div class="t">Available</div>
-              <div class="v" id="dkAvailable">0</div>
-              <div class="s">In stock</div>
-            </div>
-            <div class="kpi">
-              <div class="t">Sold</div>
-              <div class="v" id="dkSold">0</div>
-              <div class="s">Sales</div>
-            </div>
-            <div class="kpi">
-              <div class="t">Total requests</div>
-              <div class="v" id="dkRequests">0</div>
-              <div class="s">Enquiries</div>
-            </div>
-            <div class="kpi">
-              <div class="t">New requests</div>
-              <div class="v" id="dkNew">0</div>
-              <div class="s">Within range</div>
-            </div>
-            <div class="kpi">
-              <div class="t">Booked</div>
-              <div class="v" id="dkBooked">0</div>
-              <div class="s">Confirmed</div>
-            </div>
-          </div>
-
-          <div class="table-shell" style="margin-top:10px">
-            <div class="table-head">
-              <div>
-                <div class="table-title">Dealer inventory</div>
-                <div class="table-meta">Showing <span id="dealerInvCount">0</span> vehicles</div>
-              </div>
-              <div class="table-meta" id="dealerInvUpdated">—</div>
-            </div>
-            <div class="scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Vehicle</th>
-                    <th>Status</th>
-                    <th>Price</th>
-                    <th>Updated</th>
-                  </tr>
-                </thead>
-                <tbody id="dealerInvBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="table-shell" style="margin-top:10px">
-            <div class="table-head">
-              <div>
-                <div class="table-title">Dealer requests</div>
-                <div class="table-meta">Showing <span id="dealerLeadCount">0</span> requests</div>
-              </div>
-              <div class="table-meta" id="dealerLeadUpdated">—</div>
-            </div>
-            <div class="scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Vehicle</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Requested</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="dealerLeadBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- DEALER EDIT MODAL -->
-  <div class="backdrop" id="dealerBackdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Dealer editor">
-      <div class="mhead">
-        <div>
-          <h3 id="mTitle">Dealer editor</h3>
-          <div class="sub" style="font-size:12px;color:var(--muted)" id="mSub">Edit dealer profile and reset passcode.</div>
-        </div>
-        <button class="xbtn" id="mClose" type="button" aria-label="Close">×</button>
-      </div>
-
-      <div class="mbody">
-        <div class="row two">
-          <div class="field">
-            <div class="label"><span>Dealer name</span></div>
-            <input id="mDealerName" class="input" />
-          </div>
-          <div class="field">
-          <div class="label"><span>Dealer ID</span><span>AA123</span></div>
-          <input id="mDealerId" class="input" maxlength="7" />
-          </div>
-        </div>
-
-        <div class="row two">
-          <div class="field">
-            <div class="label"><span>Status</span></div>
-            <select id="mDealerStatus" class="select">
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
-            </select>
-          </div>
-          <div class="field">
-            <div class="label"><span>WhatsApp</span></div>
-            <input id="mDealerWhatsApp" class="input" placeholder="8765550123" />
-          </div>
-        </div>
-
-        <div class="field">
-          <div class="label"><span>Passcode</span><span>Editable</span></div>
-          <input id="mDealerPasscode" class="input" placeholder="123456" />
-        </div>
-
-        <div class="field">
-          <div class="label"><span>Logo URL</span></div>
-          <input id="mDealerLogo" class="input" placeholder="https://..." />
-        </div>
-
-        <div class="panel" style="margin-top:10px">
-          <h3>Security</h3>
-          <div class="hint">View or update the dealer passcode. Changes take effect immediately.</div>
-
-          <div class="row two" style="margin-top:8px">
-            <div class="field">
-              <div class="label"><span>Passcode</span><span>6 digits</span></div>
-              <input id="mPasscodeInput" class="input mono" inputmode="numeric" maxlength="6" placeholder="••••••" />
-            </div>
-            <div class="field">
-              <div class="label"><span>Actions</span></div>
-              <div style="display:flex; gap:8px; flex-wrap:wrap">
-                <button class="btn btn-danger" id="btnResetPasscode" type="button">Generate new</button>
-                <button class="btn btn-primary" id="btnSaveDealer" type="button">Save changes</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="statusline" id="mStatus"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast -->
-  <div id="toast">
-    <div id="toastDot"></div>
-    <div id="toastMsg"></div>
-  </div>
-
-  <script>
-    // =============================
+// =============================
     // API CONTRACT (expected)
     // =============================
     // POST /api/admin/login                  { username, password } -> { ok:true, token }
@@ -870,7 +75,6 @@
       newDealerName: el("newDealerName"),
       newDealerId: el("newDealerId"),
       newDealerStatus: el("newDealerStatus"),
-      newDealerPasscode: el("newDealerPasscode"),
       newDealerWhatsApp: el("newDealerWhatsApp"),
       newDealerLogo: el("newDealerLogo"),
       btnCreateDealer: el("btnCreateDealer"),
@@ -906,7 +110,6 @@
       mDealerId: el("mDealerId"),
       mDealerStatus: el("mDealerStatus"),
       mDealerWhatsApp: el("mDealerWhatsApp"),
-      mDealerPasscode: el("mDealerPasscode"),
       mDealerLogo: el("mDealerLogo"),
       mPasscodeInput: el("mPasscodeInput"),
       btnResetPasscode: el("btnResetPasscode"),
@@ -1252,7 +455,7 @@
       ui.theadRow.innerHTML = "";
 
       const cols =
-        tab==="dealers" ? ["Dealer", "Dealer ID", "Passcode", "Status", "WhatsApp", "Vehicles"]
+        tab==="dealers" ? ["Dealer", "Dealer ID", "Status", "WhatsApp", "Vehicles"]
         : tab==="inventory" ? ["Vehicle", "Dealer", "Status", "Price", "Updated"]
         : tab==="requests" ? ["Customer", "Vehicle", "Dealer", "Status", "Requested"]
         : ["Item", "Value", "Hint", "Scope", "Action"];
@@ -1293,7 +496,7 @@
       if(!rows.length){
         const tr = document.createElement("tr");
         const td = document.createElement("td");
-        td.colSpan = state.tab==="dealers" ? 6 : 5;
+        td.colSpan = 5;
         td.style.color = "var(--muted)";
         td.style.padding = "14px";
         td.textContent = "No rows match your filters.";
@@ -1311,7 +514,6 @@
 
           tr.appendChild(cell(`<div style="font-weight:900">${esc(r.name||"—")}</div><div style="color:var(--muted);font-size:11px;margin-top:2px">Branding + WhatsApp controls</div>`));
           tr.appendChild(cell(`<span class="mono">${esc(r.dealerId||"—")}</span>`));
-          tr.appendChild(cell(`<span class="mono">${esc(r.passcode||"—")}</span>`));
           tr.appendChild(cell(dealerStatusPill(r.status)));
           tr.appendChild(cell(r.whatsapp ? `<span class="badgeMini">+${esc(r.whatsapp)}</span>` : `<span style="color:var(--muted)">—</span>`));
           tr.appendChild(cell(`<span class="badgeMini">${Number(r.vehicleCount||0)} vehicles</span>`));
@@ -1369,7 +571,7 @@
     }
 
     function isValidDealerId(v){
-      return /^[A-Za-z]{2}\d{3}$/.test(String(v || "").trim());
+      return /^[A-Za-z]{2}\d{3,5}$/.test(String(v || "").trim());
     }
 
     function rangeDates(){
@@ -1547,10 +749,8 @@
 
       ui.mDealerName.value = dealer.name || "";
       ui.mDealerId.value = dealer.dealerId || "";
-      ui.mDealerPasscode.value = dealer.passcode || "";
       ui.mDealerStatus.value = (dealer.status || "active").toLowerCase();
       ui.mDealerWhatsApp.value = dealer.whatsapp || "";
-      ui.mDealerPasscode.value = dealer.passcode || "";
       ui.mDealerLogo.value = dealer.logoUrl || dealer.logo || "";
 
       const demoPass = state.demoPasscodes[dealer.dealerId];
@@ -1574,7 +774,6 @@
         name: (ui.mDealerName.value||"").trim(),
         status: (ui.mDealerStatus.value||"active").toLowerCase(),
         whatsapp: digits(ui.mDealerWhatsApp.value||""),
-        passcode: (ui.mDealerPasscode.value||"").trim(),
         logoUrl: (ui.mDealerLogo.value||"").trim(),
       };
       const passcode = (ui.mPasscodeInput.value||"").trim();
@@ -1588,7 +787,7 @@
         return;
       }
       if(!isValidDealerId(payload.dealerId)){
-        ui.mStatus.textContent = "Dealer ID must be two letters followed by three numbers.";
+        ui.mStatus.textContent = "Dealer ID must be two letters followed by 3-5 numbers.";
         ui.mStatus.classList.add("error");
         return;
       }
@@ -1678,7 +877,6 @@
         name: (ui.newDealerName.value||"").trim(),
         dealerId: (ui.newDealerId.value||"").trim().toUpperCase(),
         status: (ui.newDealerStatus.value||"active").toLowerCase(),
-        passcode: (ui.newDealerPasscode.value||"").trim(),
         whatsapp: digits(ui.newDealerWhatsApp.value||""),
         logoUrl: (ui.newDealerLogo.value||"").trim(),
       };
@@ -1689,7 +887,7 @@
         return;
       }
       if(!isValidDealerId(payload.dealerId)){
-        ui.dealerActionStatus.textContent = "Dealer ID must be two letters followed by three numbers.";
+        ui.dealerActionStatus.textContent = "Dealer ID must be two letters followed by 3-5 numbers.";
         ui.dealerActionStatus.classList.add("error");
         return;
       }
@@ -1702,14 +900,13 @@
           const exists = state.dealers.some(d => d.dealerId === payload.dealerId);
           if(exists) throw new Error("Dealer ID already exists (demo).");
 
-          const pass = payload.passcode || String(Math.floor(100000 + Math.random()*900000));
+          const pass = String(Math.floor(100000 + Math.random()*900000));
           state.demoPasscodes[payload.dealerId] = pass;
 
           state.dealers.unshift({
             name: payload.name,
             dealerId: payload.dealerId,
             status: payload.status,
-            passcode: pass,
             whatsapp: payload.whatsapp,
             logoUrl: payload.logoUrl,
             passcode: pass,
@@ -1750,7 +947,6 @@
     function clearCreateInputs(){
       ui.newDealerName.value = "";
       ui.newDealerId.value = "";
-      ui.newDealerPasscode.value = "";
       ui.newDealerWhatsApp.value = "";
       ui.newDealerLogo.value = "";
       ui.newDealerStatus.value = "active";
@@ -1871,6 +1067,3 @@
         .replaceAll('"',"&quot;")
         .replaceAll("'","&#39;");
     }
-  </script>
-</body>
-</html>
