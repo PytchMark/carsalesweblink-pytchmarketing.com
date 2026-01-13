@@ -150,62 +150,6 @@
       flex:1 1 240px;
     }
 
-    /* Hero */
-    .hero{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-      gap:16px;
-      padding:16px;
-      border-radius:var(--radius2);
-      border:1px solid var(--line);
-      background: rgba(255,255,255,.88);
-      box-shadow: var(--shadow2);
-      align-items:center;
-    }
-    .hero-media{
-      position:relative;
-      width:100%;
-      min-height:220px;
-      border-radius:20px;
-      overflow:hidden;
-      background: #f3f4f6;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:var(--muted);
-      font-size:12px;
-      border:1px solid var(--line);
-    }
-    .hero-media video,
-    .hero-media img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:none;
-    }
-    .hero-media video.active,
-    .hero-media img.active{
-      display:block;
-    }
-    .hero-copy .eyebrow{
-      font-size:11px;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      color:var(--brand);
-      font-weight:700;
-    }
-    .hero-copy h2{
-      margin:6px 0 8px;
-      font-size:24px;
-      font-weight:900;
-    }
-    .hero-copy p{
-      margin:0;
-      color:var(--muted);
-      line-height:1.5;
-      font-size:13px;
-    }
-
     /* Filters */
     .filters{
       display:flex;flex-wrap:wrap;gap:10px;
@@ -550,22 +494,9 @@
         </div>
       </header>
 
-      <section class="hero" id="heroSection" aria-label="Storefront highlight">
-        <div class="hero-media" id="heroMedia">
-          <video id="heroVideo" muted playsinline controls></video>
-          <img id="heroImage" alt="Storefront highlight" />
-          <span id="heroFallback">Showroom highlight</span>
-        </div>
-        <div class="hero-copy">
-          <div class="eyebrow">Main showroom</div>
-          <h2 id="heroTitle">Find the right vehicle, faster.</h2>
-          <p id="heroSub">Select a dealer to see real-time availability, compare options, and request a viewing in minutes.</p>
-        </div>
-      </section>
-
       <section class="dealerGate" aria-label="Dealer access">
         <div>
-          <div class="title">Enter a dealer ID to view inventory</div>
+          <div class="title">Enter dealer ID to view inventory</div>
           <div class="hint">Use the format: <strong>AA123</strong> (two letters + three numbers).</div>
         </div>
         <div class="hero-copy">
@@ -736,7 +667,6 @@
     let allVehicles = [];
     let filtered = [];
     let cloudCfg = { cloudName:"", baseFolder:"" };
-    let storefrontSettings = { storefrontLogoUrl:"", storefrontHeroVideoUrl:"" };
     let currentDealerId = "";
     let dealerProfile = null;
 
@@ -856,15 +786,8 @@
         const data = await res.json().catch(()=>null);
         cloudCfg.cloudName = data?.cloudinary?.cloudName || "";
         cloudCfg.baseFolder = data?.cloudinary?.baseFolder || "";
-        storefrontSettings = {
-          storefrontLogoUrl: data?.settings?.storefrontLogoUrl || "",
-          storefrontHeroVideoUrl: data?.settings?.storefrontHeroVideoUrl || ""
-        };
-        applyHeroMedia();
       }catch{
         cloudCfg = { cloudName:"", baseFolder:"" };
-        storefrontSettings = { storefrontLogoUrl:"", storefrontHeroVideoUrl:"" };
-        applyHeroMedia();
       }
     }
 
@@ -891,24 +814,22 @@
 
     function applyDealerBranding(){
       const badge = qs("dealerLogo");
-      const fallbackLogo = storefrontSettings.storefrontLogoUrl;
-      if (fallbackLogo && isHttpUrl(fallbackLogo)){
-        badge.innerHTML = `<img src="${fallbackLogo}" alt="Storefront logo" />`;
-      } else if (dealerProfile?.logoUrl && isHttpUrl(dealerProfile.logoUrl)){
-        badge.innerHTML = `<img src="${dealerProfile.logoUrl}" alt="${esc(dealerProfile.name || "Dealer logo")}" />`;
-      } else {
-        badge.textContent = "C";
-      }
       if (!currentDealerId){
+        badge.textContent = "C";
         qs("storeTitle").textContent = "Carsales Storefront";
-        qs("storeSub").textContent = "Enter a dealer ID to view live inventory.";
+        qs("storeSub").textContent = "Enter a dealer ID to view available inventory.";
         qs("dealerPill").textContent = "Dealer";
         qs("whatsAppBtn").style.display = "none";
         return;
       }
+      if (dealerProfile?.logoUrl && isHttpUrl(dealerProfile.logoUrl)){
+        badge.innerHTML = `<img src="${dealerProfile.logoUrl}" alt="${esc(dealerProfile.name || "Dealer logo")}" />`;
+      } else {
+        badge.textContent = "C";
+      }
       const name = dealerProfile?.name || "Live Inventory";
       qs("storeTitle").textContent = name;
-      qs("storeSub").textContent = "Browse verified inventory and request a viewing in minutes.";
+      qs("storeSub").textContent = "Browse verified inventory. Make a request in seconds.";
       qs("dealerPill").textContent = name;
 
       const wa = qs("whatsAppBtn");
@@ -918,35 +839,6 @@
       } else {
         wa.style.display = "none";
       }
-    }
-
-    function applyHeroMedia(){
-      const videoUrl = storefrontSettings.storefrontHeroVideoUrl || "";
-      const logoUrl = storefrontSettings.storefrontLogoUrl || "";
-      const heroVideo = qs("heroVideo");
-      const heroImage = qs("heroImage");
-      const heroFallback = qs("heroFallback");
-
-      heroVideo.classList.remove("active");
-      heroImage.classList.remove("active");
-      heroVideo.removeAttribute("src");
-      heroImage.removeAttribute("src");
-
-      if (isHttpUrl(videoUrl)){
-        heroVideo.src = videoUrl;
-        heroVideo.classList.add("active");
-        heroFallback.style.display = "none";
-        return;
-      }
-
-      if (isHttpUrl(logoUrl)){
-        heroImage.src = logoUrl;
-        heroImage.classList.add("active");
-        heroFallback.style.display = "none";
-        return;
-      }
-
-      heroFallback.style.display = "block";
     }
 
     // --------- Fetch inventory ----------
@@ -1127,6 +1019,12 @@
       return "";
     }
 
+    function pickHeroVideo(v){
+      const heroVideo = v?.heroVideo || "";
+      if (isHttpUrl(heroVideo)) return heroVideo;
+      return "";
+    }
+
     // Optional: Cloudinary transform for faster thumbnails.
     // Works best with Cloudinary URLs; if it’s not Cloudinary, we return the original.
     function thumb(url){
@@ -1171,8 +1069,17 @@
         tag.innerHTML = `<span class="miniDot"></span><span>Verified dealer</span>`;
         media.appendChild(tag);
 
+        const heroVideo = pickHeroVideo(v);
         const hero = pickHeroUrl(v);
-        if (hero){
+        if (heroVideo){
+          const video = document.createElement("video");
+          video.src = heroVideo;
+          video.controls = true;
+          video.muted = true;
+          video.playsInline = true;
+          video.preload = "metadata";
+          media.appendChild(video);
+        } else if (hero){
           const img = document.createElement("img");
           img.alt = title;
           img.loading = "lazy";
