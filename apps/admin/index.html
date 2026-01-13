@@ -514,6 +514,11 @@
               </div>
             </div>
 
+            <div class="field">
+              <div class="label"><span>Passcode</span><span>Optional</span></div>
+              <input id="newDealerPasscode" class="input" placeholder="123456" />
+            </div>
+
             <div class="row two">
               <div class="field">
                 <div class="label"><span>WhatsApp</span><span>Optional</span></div>
@@ -748,6 +753,11 @@
         </div>
 
         <div class="field">
+          <div class="label"><span>Passcode</span><span>Editable</span></div>
+          <input id="mDealerPasscode" class="input" placeholder="123456" />
+        </div>
+
+        <div class="field">
           <div class="label"><span>Logo URL</span></div>
           <input id="mDealerLogo" class="input" placeholder="https://..." />
         </div>
@@ -860,6 +870,7 @@
       newDealerName: el("newDealerName"),
       newDealerId: el("newDealerId"),
       newDealerStatus: el("newDealerStatus"),
+      newDealerPasscode: el("newDealerPasscode"),
       newDealerWhatsApp: el("newDealerWhatsApp"),
       newDealerLogo: el("newDealerLogo"),
       btnCreateDealer: el("btnCreateDealer"),
@@ -895,6 +906,7 @@
       mDealerId: el("mDealerId"),
       mDealerStatus: el("mDealerStatus"),
       mDealerWhatsApp: el("mDealerWhatsApp"),
+      mDealerPasscode: el("mDealerPasscode"),
       mDealerLogo: el("mDealerLogo"),
       mPasscodeInput: el("mPasscodeInput"),
       btnResetPasscode: el("btnResetPasscode"),
@@ -1240,7 +1252,7 @@
       ui.theadRow.innerHTML = "";
 
       const cols =
-        tab==="dealers" ? ["Dealer", "Dealer ID", "Status", "WhatsApp", "Vehicles"]
+        tab==="dealers" ? ["Dealer", "Dealer ID", "Passcode", "Status", "WhatsApp", "Vehicles"]
         : tab==="inventory" ? ["Vehicle", "Dealer", "Status", "Price", "Updated"]
         : tab==="requests" ? ["Customer", "Vehicle", "Dealer", "Status", "Requested"]
         : ["Item", "Value", "Hint", "Scope", "Action"];
@@ -1281,7 +1293,7 @@
       if(!rows.length){
         const tr = document.createElement("tr");
         const td = document.createElement("td");
-        td.colSpan = 5;
+        td.colSpan = state.tab==="dealers" ? 6 : 5;
         td.style.color = "var(--muted)";
         td.style.padding = "14px";
         td.textContent = "No rows match your filters.";
@@ -1299,6 +1311,7 @@
 
           tr.appendChild(cell(`<div style="font-weight:900">${esc(r.name||"—")}</div><div style="color:var(--muted);font-size:11px;margin-top:2px">Branding + WhatsApp controls</div>`));
           tr.appendChild(cell(`<span class="mono">${esc(r.dealerId||"—")}</span>`));
+          tr.appendChild(cell(`<span class="mono">${esc(r.passcode||"—")}</span>`));
           tr.appendChild(cell(dealerStatusPill(r.status)));
           tr.appendChild(cell(r.whatsapp ? `<span class="badgeMini">+${esc(r.whatsapp)}</span>` : `<span style="color:var(--muted)">—</span>`));
           tr.appendChild(cell(`<span class="badgeMini">${Number(r.vehicleCount||0)} vehicles</span>`));
@@ -1534,8 +1547,10 @@
 
       ui.mDealerName.value = dealer.name || "";
       ui.mDealerId.value = dealer.dealerId || "";
+      ui.mDealerPasscode.value = dealer.passcode || "";
       ui.mDealerStatus.value = (dealer.status || "active").toLowerCase();
       ui.mDealerWhatsApp.value = dealer.whatsapp || "";
+      ui.mDealerPasscode.value = dealer.passcode || "";
       ui.mDealerLogo.value = dealer.logoUrl || dealer.logo || "";
 
       const demoPass = state.demoPasscodes[dealer.dealerId];
@@ -1559,6 +1574,7 @@
         name: (ui.mDealerName.value||"").trim(),
         status: (ui.mDealerStatus.value||"active").toLowerCase(),
         whatsapp: digits(ui.mDealerWhatsApp.value||""),
+        passcode: (ui.mDealerPasscode.value||"").trim(),
         logoUrl: (ui.mDealerLogo.value||"").trim(),
       };
       const passcode = (ui.mPasscodeInput.value||"").trim();
@@ -1662,6 +1678,7 @@
         name: (ui.newDealerName.value||"").trim(),
         dealerId: (ui.newDealerId.value||"").trim().toUpperCase(),
         status: (ui.newDealerStatus.value||"active").toLowerCase(),
+        passcode: (ui.newDealerPasscode.value||"").trim(),
         whatsapp: digits(ui.newDealerWhatsApp.value||""),
         logoUrl: (ui.newDealerLogo.value||"").trim(),
       };
@@ -1685,13 +1702,14 @@
           const exists = state.dealers.some(d => d.dealerId === payload.dealerId);
           if(exists) throw new Error("Dealer ID already exists (demo).");
 
-          const pass = String(Math.floor(100000 + Math.random()*900000));
+          const pass = payload.passcode || String(Math.floor(100000 + Math.random()*900000));
           state.demoPasscodes[payload.dealerId] = pass;
 
           state.dealers.unshift({
             name: payload.name,
             dealerId: payload.dealerId,
             status: payload.status,
+            passcode: pass,
             whatsapp: payload.whatsapp,
             logoUrl: payload.logoUrl,
             passcode: pass,
@@ -1732,6 +1750,7 @@
     function clearCreateInputs(){
       ui.newDealerName.value = "";
       ui.newDealerId.value = "";
+      ui.newDealerPasscode.value = "";
       ui.newDealerWhatsApp.value = "";
       ui.newDealerLogo.value = "";
       ui.newDealerStatus.value = "active";

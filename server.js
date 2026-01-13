@@ -237,6 +237,7 @@ function publicDealer(d) {
     passcode: d.passcode || "",
     whatsapp: d.whatsapp,
     logoUrl: d.logoUrl,
+    passcode: d.passcode,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
@@ -514,6 +515,7 @@ async function adminUpsertDealer(sheets, dealer) {
     dealer.logoUrl || "",
     dealer.createdAt || nowIso(),
     dealer.updatedAt || nowIso(),
+    dealer.passcode || "",
   ];
 
   if (idx === -1) {
@@ -1020,7 +1022,7 @@ app.post("/api/admin/dealers", requireAuth, requireAdmin, async (req, res) => {
     await adminUpsertDealer(sheets, record);
     await ensureDealerTabLayout(sheets, normalizedDealerId);
 
-    res.json({ ok: true, dealer: publicDealer(record), passcode: passcode || undefined });
+    res.json({ ok: true, dealer: publicDealer(record), passcode: issuedPasscode || undefined });
   } catch (e) {
     res.status(500).json({ ok: false, error: e?.message || "Failed to create dealer" });
   }
@@ -1305,6 +1307,7 @@ app.post("/api/dealers/:dealerId/vehicles/:vehicleId/uploads/sign", requireAuth,
 app.get("/api/public/vehicles", async (req, res) => {
   try {
     const { dealerId } = req.query || {};
+    const normalizedDealerId = normalizeDealerId(dealerId);
     const sheets = await getSheetsClient();
 
     const resolvedDealerId = String(dealerId || DEFAULT_DEALER_ID || "").trim();
